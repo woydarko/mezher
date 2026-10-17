@@ -244,11 +244,11 @@ web/
   ```
   `route.ts` wires real deps with viem (`createPublicClient`, `createWalletClient` with `privateKeyToAccount(process.env.RELAYER_PRIVATE_KEY)`, `simulateContract`, `writeContract`, revert decoding with `decodeErrorResult` against `mezherPayAbi`, falling back to the Mezo revert string), `export const runtime = "nodejs"`. Logging per SECURITY.md (route, status, payer prefix, hash only).
 
-- [ ] **Step 1: Failing tests** with fake deps: valid body → 200 `{hash}` and `send` called once; malformed body → 400 `invalid_input`; body > 4096 bytes → 413; simulation `{ok: false, reason: "IcrBelowFloor"}` → 422 `simulation_failed` and `send` not called; 6th request from the same payer within 60 s (controlled `now`) → 429; the same (merchant, orderId, payer) twice within 10 minutes → 409; relayer balance < 5e14 → 503 `relayer_unavailable`; deadline > now + 3600 s → 400.
-- [ ] **Step 2: Run** `pnpm vitest run test/relay.test.ts` → FAIL.
-- [ ] **Step 3: Implement** (`// shortcut: in-memory Maps per serverless instance, move to Redis/Upstash if abused`).
-- [ ] **Step 4: Run** → PASS; `pnpm build` → success; `grep -r RELAYER_PRIVATE_KEY web/.next/static` → no match.
-- [ ] **Step 5: Commit** `feat(web): gasless relay endpoint with simulation and rate limits`.
+- [x] **Step 1: Failing tests** with fake deps: valid body → 200 `{hash}` and `send` called once; malformed body → 400 `invalid_input`; body > 4096 bytes → 413; simulation `{ok: false, reason: "IcrBelowFloor"}` → 422 `simulation_failed` and `send` not called; 6th request from the same payer within 60 s (controlled `now`) → 429; the same (merchant, orderId, payer) twice within 10 minutes → 409; relayer balance < 5e14 → 503 `relayer_unavailable`; deadline > now + 3600 s → 400.
+- [x] **Step 2: Run** `pnpm vitest run test/relay.test.ts` → FAIL.
+- [x] **Step 3: Implement** (`// shortcut: in-memory Maps per serverless instance, move to Redis/Upstash if abused`).
+- [x] **Step 4: Run** → PASS; `pnpm build` → success; `grep -r RELAYER_PRIVATE_KEY web/.next/static` → no match.
+- [x] **Step 5: Commit** `feat(web): gasless relay endpoint with simulation and rate limits`.
 
 ### Task 9: Checkout + receipt (core, F-01, F-02, F-03, F-05, F-07; golden path end to end)
 
