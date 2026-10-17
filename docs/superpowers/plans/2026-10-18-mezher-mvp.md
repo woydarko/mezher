@@ -169,11 +169,11 @@ web/
 **Interfaces:**
 - Produces: `type PayLink = { to: Address; amountWei: bigint; orderId: Hex; orderRaw: string; label?: string }`; `parseLink(params: URLSearchParams): { ok: true; link: PayLink } | { ok: false; error: "incomplete" }`; `buildLink(origin: string, input: { to: string; amount: string; order: string; label?: string }): { ok: true; url: string } | { ok: false; field: "to" | "amount" | "order" | "label"; message: string }`; `randomOrder(): string` (16 lowercase hex chars).
 
-- [ ] **Step 1: Failing tests:** round trip `buildLink(origin, {to, amount: "12", order: "3f9a1c0d2b4e5f60", label: "Coffee"})` → `parseLink` gives the same `to`, `amountWei === 12n * 10n**18n`, `orderId === "0x" + "0".repeat(48) + "3f9a1c0d2b4e5f60"`, label "Coffee"; rejects amount `"0"`, `""`, 19 decimals, `"-1"`; **`parseLink rejects locale and scientific formats`** (`"12,5"`, `"1e3"`, `" 12"`); rejects a bad address and orders of 15 or 65 chars or non-hex; `buildLink` rejects a 61-char label; `randomOrder()` matches `/^[0-9a-f]{16}$/`.
-- [ ] **Step 2: Run** `pnpm vitest run test/link.test.ts` → FAIL.
-- [ ] **Step 3: Implement** with viem `isAddress`, `getAddress`, `parseUnits`, `pad`; amount regex `^\d+(\.\d{1,18})?$` and value > 0; field messages in DESIGN_SYSTEM voice ("Enter an amount greater than 0.", "Enter a valid 0x address.", "Order id must be 16–64 hex characters.", "Keep the label under 60 characters.").
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `feat(web): payment link parse/build`.
+- [x] **Step 1: Failing tests:** round trip `buildLink(origin, {to, amount: "12", order: "3f9a1c0d2b4e5f60", label: "Coffee"})` → `parseLink` gives the same `to`, `amountWei === 12n * 10n**18n`, `orderId === "0x" + "0".repeat(48) + "3f9a1c0d2b4e5f60"`, label "Coffee"; rejects amount `"0"`, `""`, 19 decimals, `"-1"`; **`parseLink rejects locale and scientific formats`** (`"12,5"`, `"1e3"`, `" 12"`); rejects a bad address and orders of 15 or 65 chars or non-hex; `buildLink` rejects a 61-char label; `randomOrder()` matches `/^[0-9a-f]{16}$/`.
+- [x] **Step 2: Run** `pnpm vitest run test/link.test.ts` → FAIL.
+- [x] **Step 3: Implement** with viem `isAddress`, `getAddress`, `parseUnits`, `pad`; amount regex `^\d+(\.\d{1,18})?$` and value > 0; field messages in DESIGN_SYSTEM voice ("Enter an amount greater than 0.", "Enter a valid 0x address.", "Order id must be 16–64 hex characters.", "Keep the label under 60 characters.").
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `feat(web): payment link parse/build`.
 
 ### Task 6: Quote math (core, F-02, mirror of F-04)
 
