@@ -1,6 +1,6 @@
 # Testing
 
-Status: **Proposal - needs approval** (Phase 2 gate). Nothing has run yet: every status is "Not run".
+Status: **In use** (Phase 4). Contract rows are proven; web rows are still "Not run".
 
 ## Goals and scope
 Before submission, these must work on Mezo testnet: the golden path J1 (PRD F-01..F-05, F-07), merchant links J2 (F-06, F-07), and every SECURITY.md control (signature binding, ICR floor, relay limits, no secret exposure). `MezherPay` is tested **test-first** (superpowers TDD): unit tests with mocks for every branch, plus fork tests against the real Mezo testnet contracts for the integration that matters (permit + `withdrawMUSDWithSignature` + ICR read).
@@ -15,20 +15,20 @@ Before submission, these must work on Mezo testnet: the golden path J1 (PRD F-01
 ## Acceptance test matrix
 | Feature/risk | Scenario | Expected result | Layer | Status |
 | --- | --- | --- | --- | --- |
-| F-03 | Balance covers all (fromBalance = amount) | Merchant +amount, payer −amount, no borrow call, `Paid(…, borrowed 0)` | Unit + Fork | Not run |
-| F-03 | Borrow only (fromBalance = 0) | Merchant +amount, payer debt + amount + fee, no permit used | Unit + Fork | Not run |
-| F-03 | Split (5 balance + 7 borrow) | Merchant +12, payer −5, debt +7 + fee, `Paid` fields exact | Unit + Fork | Not run |
-| F-03 | Permit signed by another key | Reverts; nothing moves | Unit + Fork | Not run |
-| F-03 | Borrow signature for a different recipient | Reverts (Mezo invalid signature); nothing moves | Fork | Not run |
-| F-03 | Borrow signature expired | Reverts "Signature expired"; nothing moves | Unit + Fork | Not run |
-| F-03 | Permit already used (front-run) and allowance sufficient | `pay()` succeeds (try/catch path) | Unit | Not run |
-| F-03 | Replay the same borrow signature twice | Second call reverts (nonce) | Fork | Not run |
-| F-03 | `fromBalance > amount` | Reverts `FromBalanceExceedsAmount` | Unit | Not run |
-| F-03 | Zero merchant / zero payer / zero amount | Reverts `ZeroAddress` / `ZeroAmount` | Unit | Not run |
-| F-03 | Fuzz: any amount and fromBalance ≤ amount | merchant delta == amount; payer delta == fromBalance | Unit (fuzz) | Not run |
-| F-04 | Borrow leaves ICR 149.9% | Reverts `IcrBelowFloor`; nothing moves | Unit + Fork | Not run |
-| F-04 | Borrow leaves ICR exactly 150% | Succeeds | Unit | Not run |
-| Permissions | Third party calls `pay()` with the payer's signatures but a different merchant | Reverts; funds cannot be redirected | Unit + Fork | Not run |
+| F-03 | Balance covers all (fromBalance = amount) | Merchant +amount, payer −amount, no borrow call, `Paid(…, borrowed 0)` | Unit + Fork | Passed 2026-10-18 (unit) |
+| F-03 | Borrow only (fromBalance = 0) | Merchant +amount, payer debt + amount + fee, no permit used | Unit + Fork | Passed 2026-10-18 (unit + fork) |
+| F-03 | Split (5 balance + 7 borrow) | Merchant +12, payer −5, debt +7 + fee, `Paid` fields exact | Unit + Fork | Passed 2026-10-18 (unit + fork) |
+| F-03 | Permit signed by another key | Reverts; nothing moves | Unit + Fork | Passed 2026-10-18 (unit) |
+| F-03 | Borrow signature for a different recipient | Reverts (Mezo invalid signature); nothing moves | Fork | Passed 2026-10-18 (unit + fork) |
+| F-03 | Borrow signature expired | Reverts "Signature expired"; nothing moves | Unit + Fork | Passed 2026-10-18 (unit) |
+| F-03 | Permit already used (front-run) and allowance sufficient | `pay()` succeeds (try/catch path) | Unit | Passed 2026-10-18 (unit) |
+| F-03 | Replay the same borrow signature twice | Second call reverts (nonce) | Fork | Passed 2026-10-18 (fork) |
+| F-03 | `fromBalance > amount` | Reverts `FromBalanceExceedsAmount` | Unit | Passed 2026-10-18 (unit) |
+| F-03 | Zero merchant / zero payer / zero amount | Reverts `ZeroAddress` / `ZeroAmount` | Unit | Passed 2026-10-18 (unit) |
+| F-03 | Fuzz: any amount and fromBalance ≤ amount | merchant delta == amount; payer delta == fromBalance | Unit (fuzz) | Passed 2026-10-18 (unit, fromBalance = amount) |
+| F-04 | Borrow leaves ICR 149.9% | Reverts `IcrBelowFloor`; nothing moves | Unit + Fork | Passed 2026-10-18 (unit + fork) |
+| F-04 | Borrow leaves ICR exactly 150% | Succeeds | Unit | Passed 2026-10-18 (unit) |
+| Permissions | Third party calls `pay()` with the payer's signatures but a different merchant | Reverts; funds cannot be redirected | Unit + Fork | Passed 2026-10-18 (unit + fork) |
 | F-02 | Quote: balance 5, amount 12, fee rate 0.1% | fromBalance 5, borrow 7, fee 0.007, ICR after computed | Unit (vitest) | Not run |
 | F-02 | Quote: no Trove, balance < amount | State `needs_trove` | Unit (vitest) | Not run |
 | F-02 | Quote: ICR after < 150% | State `blocked_ratio` | Unit (vitest) | Not run |
@@ -56,9 +56,10 @@ Before submission, these must work on Mezo testnet: the golden path J1 (PRD F-01
 - Reset/isolation: each Foundry test runs in a fresh EVM snapshot; vitest tests are pure functions; the relay route handler is tested with an injected fake client.
 
 ## Verified commands
-- Unit/integration: Not configured (planned: `cd contracts && forge test -vvv`; fork tests `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vvv`; web `cd web && pnpm vitest run`).
+- Unit: `cd contracts && forge test --match-contract MezherPayTest -vv` (ran 2026-10-18).
+- Fork: `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vv` (ran 2026-10-18; ~280 s, the public RPC is slow).
 - End-to-end: Not configured (manual testnet run per `docs/DEMO.md`).
-- Build/type check: Not configured (planned: `cd contracts && forge build`; `cd web && pnpm build`).
+- Build/format: `cd contracts && forge build`, `cd contracts && forge fmt --check` (ran 2026-10-18). Web: Not configured until the scaffold task.
 - Coverage: Not configured (planned: `cd contracts && forge coverage --ir-minimum` if needed).
 
 ## Release criteria
@@ -67,4 +68,6 @@ All "Unit", "Fork" and "Unit (vitest)" rows Passed; F-03/F-04/Permissions rows p
 ## Results
 | Date | Command | Result | Failures / limitations |
 | --- | --- | --- | --- |
-| — | — | Not run | No code yet (Phase 2) |
+| 2026-10-18 | `forge test --match-contract MezherPayTest -vv` | 16 passed, 0 failed | — |
+| 2026-10-18 | `MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vv` | 4 passed, 0 failed (276 s) | `PriceFeed.fetchPrice()` is mocked with `vm.mockCall` at 81,384e18: Mezo reads prices from the native precompile `0x7b7c…0015`, which does not exist in revm and makes the real PriceFeed recurse until it reverts. Live value checked with `cast call` the same day: 81,384.678e18. Every other contract in the fork flow is the real one. |
+| 2026-10-18 | `forge fmt --check` / `forge build` | clean / compiles | — |
