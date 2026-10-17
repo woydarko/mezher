@@ -218,11 +218,11 @@ web/
   ```
   Hints: `nicr = collWei * 10n**20n / debtAfterWei`; `HintHelpers.getApproxHint(nicr, 15n, randomSeed)` → first return value `hintAddress`; `SortedTroves.findInsertPosition(nicr, hint, hint)` → `[upper, lower]`.
 
-- [ ] **Step 1: Failing tests:** `withdrawTypedData` domain equals `{name: "BorrowerOperationsSignatures", version: "1", chainId: 31611, verifyingContract: ADDRESSES.borrowerOpsSignatures}`, primaryType `WithdrawMUSD`, fields in order `amount, borrower, recipient, nonce, deadline`; `permitTypedData` domain name `"Mezo USD"`, version `"1"`, type fields `owner, spender, value, nonce, deadline`; `hashTypedData(withdrawTypedData(x))` equals a digest built in the test the way the contract does (`keccak256(0x1901 ‖ domainSeparator ‖ keccak256(TYPEHASH ‖ abi.encode(amount, borrower, recipient) ‖ nonce ‖ deadline))` with viem `encodePacked`/`encodeAbiParameters`); `getBorrowHints` with a fake client calls `getApproxHint` then `findInsertPosition` with the computed NICR and returns that pair.
-- [ ] **Step 2: Run** `pnpm vitest run test/signatures.test.ts test/hints.test.ts` → FAIL.
-- [ ] **Step 3: Implement.**
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `feat(web): EIP-712 builders for MUSD permit and WithdrawMUSD, trove hints`.
+- [x] **Step 1: Failing tests:** `withdrawTypedData` domain equals `{name: "BorrowerOperationsSignatures", version: "1", chainId: 31611, verifyingContract: ADDRESSES.borrowerOpsSignatures}`, primaryType `WithdrawMUSD`, fields in order `amount, borrower, recipient, nonce, deadline`; `permitTypedData` domain name `"Mezo USD"`, version `"1"`, type fields `owner, spender, value, nonce, deadline`; `hashTypedData(withdrawTypedData(x))` equals a digest built in the test the way the contract does (`keccak256(0x1901 ‖ domainSeparator ‖ keccak256(TYPEHASH ‖ abi.encode(amount, borrower, recipient) ‖ nonce ‖ deadline))` with viem `encodePacked`/`encodeAbiParameters`); `getBorrowHints` with a fake client calls `getApproxHint` then `findInsertPosition` with the computed NICR and returns that pair.
+- [x] **Step 2: Run** `pnpm vitest run test/signatures.test.ts test/hints.test.ts` → FAIL.
+- [x] **Step 3: Implement.**
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `feat(web): EIP-712 builders for MUSD permit and WithdrawMUSD, trove hints`.
 
 ### Task 8: Gasless relay API (core, F-05)
 
