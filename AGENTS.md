@@ -6,6 +6,8 @@ Mezher — "Pay with your Bitcoin. Keep your Bitcoin." A Mezo Buildathon (Wave 1
 
 Solo project: there is no `docs/hackathon/TEAM.md` and no `docs/hackathon/log/` folder; checkpoints go into `docs/hackathon/STATE.md`. Event facts (rules, judging, Mezo research, verified contract addresses): `MEZO_BUILDATHON.md`.
 
+**Build from the plan:** `docs/superpowers/plans/2026-10-18-mezher-mvp.md` — execute tasks in order, test-first, ticking the checkboxes and committing after each task. Stretch tasks only after Task 11.
+
 ## Project context
 Read docs/PRD.md, docs/DESIGN_SYSTEM.md, docs/ARCHITECTURE.md, docs/DATABASE.md, docs/SECURITY.md, docs/CODE_STYLE.md, and docs/TESTING.md before implementing a feature. Summarize relevant requirements and unresolved decisions first.
 
@@ -50,4 +52,4 @@ Deployment, data deletion, migrations against production, and external messaging
 - Owner: repo owner (solo builder; sole decision maker).
 - Approved commands: docs/CODE_STYLE.md "Verified commands" and docs/TESTING.md "Verified commands" (currently "Not configured" until the scaffold task runs them).
 - Sensitive systems: `RELAYER_PRIVATE_KEY` (Vercel env), Foundry keystore `mezher-deployer`, the demo payer wallet (testnet), Vercel project.
-- Blocking unknowns: see PRD "Open decisions" and STATE.md "Unresolved" (EVM-only payers vs Mezo Passport BTC wallets; Vercel hosting approval; deadline timezone; `PriceFeed.fetchPrice()` mutability).
+- Blocking unknowns: see STATE.md "Unresolved" (deadline timezone; whether Mezo Passport needs a WalletConnect project id). Approved: EVM-only payers, Vercel hosting (each production deploy still needs the owner's OK), no worktree (work in the repo root).

@@ -45,8 +45,8 @@ Web3 split 15% / 50% / 15% / 20% over 2026-10-18 00:15 -> 2026-10-26 20:00 +0700
 | Phase | Status | Budget | Planned start -> end | Actual end | Notes |
 | --- | --- | --- | --- | --- | --- |
 | 1 Intake | Done | - | 2026-10-17 23:00 -> 2026-10-18 00:15 | 2026-10-18 00:15 | |
-| 2 Design + docs | In progress — docs drafted, awaiting owner approval | 21.75 h | 2026-10-18 00:15 -> 2026-10-18 22:00 | | 8-doc bundle + DEPLOYMENTS.md written; brainstorming questions skipped (owner delegated design: "recommend dri lu") |
-| 3 Plan | Not started | 10 h | 2026-10-18 22:00 -> 2026-10-19 08:00 | | |
+| 2 Design + docs | Done — approved by owner (incl. EVM-only payers, Vercel) | 21.75 h | 2026-10-18 00:15 -> 2026-10-18 22:00 | 2026-10-18 01:05 | 8-doc bundle + DEPLOYMENTS.md written; brainstorming questions skipped (owner delegated design: "recommend dri lu") |
+| 3 Plan | In progress — plan written, awaiting owner review | 10 h | 2026-10-18 22:00 -> 2026-10-19 08:00 | | docs/superpowers/plans/2026-10-18-mezher-mvp.md (11 core tasks + 4 stretch). No worktree (owner: work in place; build via Orca) |
 | 4 Build | Not started | 105.83 h | 2026-10-19 08:00 -> 2026-10-23 17:50 | | testnet walking skeleton by 2026-10-21 02:00 (~40%) |
 | 5 Verify + audit | Not started | 31.75 h | 2026-10-23 17:50 -> 2026-10-25 01:35 | | |
 | 6 Demo and submit | Not started | 42.42 h | 2026-10-25 01:35 -> 2026-10-26 20:00 | | internal submit 2026-10-26 08:00 |
@@ -85,5 +85,5 @@ Over-budget warnings sent: none
 ## Unresolved
 - Deadline timezone (JST vs other) - owner: user (deferred)
 - Testnet faucet amount per claim vs the ~0.037 BTC needed for a 2,000 MUSD Trove at 150% ICR - owner: me (check wallet balance)
-- `nonces(address)` call on BorrowerOperationsSignatures reverted on testnet; confirm the nonce getter from the ABI - owner: me
-- Public ERC-4337 bundler on Mezo (only if the smart-account path is chosen) - owner: me
+- Resolved: nonce getter is `getNonce(address)`; `fetchPrice()` is view; smart-account path out of scope (EVM-only payers approved).
+- WalletConnect project id needed by Mezo Passport `getConfig`? - owner: builder (Task 4)

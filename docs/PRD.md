@@ -79,7 +79,7 @@ Tracks: **Track 2 (Access & Distribution)** primary; **Track 1 (DeFi, borrowing)
 - Mezo Passport BTC-wallet users sign through a smart account; the Mezo signature contracts and the MUSD permit verify ECDSA only. **Proposal - needs approval:** core supports EVM (ECDSA) wallets as payers; BTC wallets are shown "coming soon" for paying. Owner: repo owner, needed before Phase 3.
 - Relayer hosting = the same Next.js deployment on Vercel. Production deploys need the owner's OK each time. **Proposal - needs approval.** Owner: repo owner, needed before Phase 6.
 - Deadline timezone (JST assumed). Owner: repo owner, needed before 2026-10-25.
-- `PriceFeed.fetchPrice()` may be state-changing (Liquity heritage); `MezherPay` must call it as a non-view. To be confirmed in the Phase 4 fork test. Owner: builder.
+- Resolved 2026-10-18: owner approved EVM-only payers and Vercel hosting; `PriceFeed.fetchPrice()` is `view`.
 
 ## Definition of ready
 Scope, journeys and acceptance criteria above are approved by the owner. Blocking unknowns listed under Open decisions have owners. Phase 3 (plan) starts only after approval.

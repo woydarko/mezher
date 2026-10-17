@@ -112,8 +112,8 @@ Confirmed by evidence:
 - MUSD has no flashmint; borrow-on-behalf exists via `withdrawMUSDWithSignature` (ECDSA, EIP-712 domain "BorrowerOperationsSignatures" v1, nonce getter `getNonce`). MUSD permit domain "Mezo USD" v1.
 - MUSD is minted to `_recipient` on a debt increase (`BorrowerOperations._withdrawMUSD` → `musd.mint(_account, …)`).
 - Mezo Pools, Pyth, x402 facilitator, EntryPoint v0.7 exist on testnet (not used by core).
+- `IPriceFeed.fetchPrice()` is declared `external view` (checked in `mezo-org/musd` 2026-10-18).
 Proposals (owner approval needed): the whole stack above; Vercel hosting; EVM-only payers; ICR floor 150% hard-coded; no on-chain order uniqueness.
 Unknowns (owner: builder, resolve in Phase 4 tests):
-- `PriceFeed.fetchPrice()` mutability (call as non-view in the contract; `eth_call` from the client works, already observed).
 - Whether `getCurrentICR` includes pending rewards/interest exactly as the post-borrow check needs (fork test asserts behaviour).
 - Whether `@mezo-org/passport` `getConfig` needs a WalletConnect project id.
