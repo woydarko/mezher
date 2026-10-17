@@ -196,11 +196,11 @@ web/
   ```
   The fee comes from the chain (`getBorrowingFee(borrowWei)`) and is passed in; `maxBorrowWei` uses `feeRateE18 = 10n**15n` (0.1%).
 
-- [ ] **Step 1: Failing tests:** balance 5e18, amount 12e18, fee 7e15, coll 0.04e18, debt 2000e18, price 81_155e18 → `ok`, fromBalance 5e18, borrow 7e18, `icrAfterE18 === icrE18(coll, price, 2000e18 + 7e18 + 7e15)`; balance ≥ amount → borrow 0 and state `ok` even without a Trove (ICR fields null when status ≠ 1); status ≠ 1 and balance < amount → `needs_trove` with the shortfall; **`quote blocks at 150.4% and allows at 150.5%`** (debt chosen so icrAfter is exactly each value); `maxBorrowWei` result keeps icr ≥ floor after the fee and +1 wei breaks it.
-- [ ] **Step 2: Run** `pnpm vitest run test/quote.test.ts` → FAIL.
-- [ ] **Step 3: Implement** (pure bigint math, round ICR down — conservative).
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `feat(web): quote math with ICR safety margin`.
+- [x] **Step 1: Failing tests:** balance 5e18, amount 12e18, fee 7e15, coll 0.04e18, debt 2000e18, price 81_155e18 → `ok`, fromBalance 5e18, borrow 7e18, `icrAfterE18 === icrE18(coll, price, 2000e18 + 7e18 + 7e15)`; balance ≥ amount → borrow 0 and state `ok` even without a Trove (ICR fields null when status ≠ 1); status ≠ 1 and balance < amount → `needs_trove` with the shortfall; **`quote blocks at 150.4% and allows at 150.5%`** (debt chosen so icrAfter is exactly each value); `maxBorrowWei` result keeps icr ≥ floor after the fee and +1 wei breaks it.
+- [x] **Step 2: Run** `pnpm vitest run test/quote.test.ts` → FAIL.
+- [x] **Step 3: Implement** (pure bigint math, round ICR down — conservative).
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `feat(web): quote math with ICR safety margin`.
 
 ### Task 7: Typed data + Trove hints (core, F-03)
 
