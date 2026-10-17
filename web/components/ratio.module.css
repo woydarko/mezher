@@ -1,0 +1,38 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--color-border);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  transition: width var(--dur-base) var(--ease);
+}
+
+.marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--color-text);
+}
+
+.labels {
+  position: relative;
+  height: 16px;
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.labels span {
+  position: absolute;
+  transform: translateX(-50%);
+}
