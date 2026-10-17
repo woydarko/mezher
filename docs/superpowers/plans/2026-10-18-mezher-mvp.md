@@ -112,7 +112,7 @@ web/
 - Consumes: Task 1 structs, errors, event.
 - `MockBorrowerOps` (mirrors Mezo): EIP712 domain `("BorrowerOperationsSignatures", "1")`; `WITHDRAW_MUSD_TYPEHASH = keccak256("WithdrawMUSD(uint256 amount,address borrower,address recipient,uint256 nonce,uint256 deadline)")`; digest `_hashTypedDataV4(keccak256(abi.encodePacked(TYPEHASH, abi.encode(amount, borrower, recipient), nonces[borrower], deadline)))`; `require(block.timestamp <= deadline, "Signature expired")`; ECDSA recover must equal borrower else revert `"BorrowerOperationsSignatures: Invalid signature"`; increments the nonce; mints `amount` MockMUSD to `recipient`; adds `amount + amount / 1000` to `debt[borrower]`.
 
-- [ ] **Step 1: Failing tests:**
+- [x] **Step 1: Failing tests:**
   - `test_pay_borrowOnly_mintsToMerchant`: fromBalance 0, amount 7e18 → merchant +7e18, payer balance unchanged, `mock.debt(payer) == 7.007e18`.
   - `test_pay_split_5plus7`: payer balance 5e18, amount 12e18, fromBalance 5e18 → merchant +12e18, payer −5e18, debt +7.007e18, event `Paid(orderId, payer, merchant, 12e18, 5e18, 7e18)`.
   - `testRevert_borrowSigForOtherRecipient`: signature with recipient = attacker, `pay` to merchant → reverts "Invalid signature"; merchant and attacker balances unchanged.
@@ -120,10 +120,10 @@ web/
   - `testRevert_icrBelowFloor`: MockTroveManager ICR 1.499e18 → reverts `IcrBelowFloor(1.499e18)`; merchant unchanged (atomic).
   - `test_pay_icrExactlyFloor_succeeds`: ICR 1.5e18 → succeeds.
   - `test_pay_fromBalanceOnly_skipsIcrCheck`: ICR 1e18 and borrowed 0 → succeeds.
-- [ ] **Step 2: Run** `forge test -vvv` → new tests FAIL.
-- [ ] **Step 3: Implement** in `pay`: if `borrowed > 0`: `bos.withdrawMUSDWithSignature(borrowed, borrow.upperHint, borrow.lowerHint, p.payer, p.merchant, borrow.signature, borrow.deadline)`; then `uint256 icr = troveManager.getCurrentICR(p.payer, priceFeed.fetchPrice()); if (icr < MIN_ICR_AFTER) revert IcrBelowFloor(icr);`.
-- [ ] **Step 4: Run** `forge test -vvv` → all PASS.
-- [ ] **Step 5: Commit** `feat(contracts): borrow-to-merchant via withdrawMUSDWithSignature with ICR floor`.
+- [x] **Step 2: Run** `forge test -vvv` → new tests FAIL.
+- [x] **Step 3: Implement** in `pay`: if `borrowed > 0`: `bos.withdrawMUSDWithSignature(borrowed, borrow.upperHint, borrow.lowerHint, p.payer, p.merchant, borrow.signature, borrow.deadline)`; then `uint256 icr = troveManager.getCurrentICR(p.payer, priceFeed.fetchPrice()); if (icr < MIN_ICR_AFTER) revert IcrBelowFloor(icr);`.
+- [x] **Step 4: Run** `forge test -vvv` → all PASS.
+- [x] **Step 5: Commit** `feat(contracts): borrow-to-merchant via withdrawMUSDWithSignature with ICR floor`.
 
 ### Task 3: Fork tests against real Mezo + testnet deploy (core, on-chain walking skeleton; F-03, F-04)
 

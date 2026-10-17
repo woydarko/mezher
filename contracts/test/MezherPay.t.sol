@@ -29,7 +29,7 @@ contract MezherPayTest is Test {
 
     function setUp() public {
         musd = new MockMUSD();
-        bos = new MockBorrowerOps();
+        bos = new MockBorrowerOps(musd);
         troveManager = new MockTroveManager();
         priceFeed = new MockPriceFeed();
         mezherPay = new MezherPay(
@@ -58,6 +58,24 @@ contract MezherPayTest is Test {
 
     function _noBorrowSig() internal pure returns (MezherPay.BorrowSig memory) {
         return MezherPay.BorrowSig({upperHint: address(0), lowerHint: address(0), deadline: 0, signature: ""});
+    }
+
+    /// @dev Signs the Mezo `WithdrawMUSD` message with `pk` over the MockBorrowerOps domain.
+    function _borrowSig(uint256 pk, uint256 amount, address borrower, address recipient, uint256 deadline)
+        internal
+        view
+        returns (MezherPay.BorrowSig memory)
+    {
+        bytes32 structHash = keccak256(
+            abi.encodePacked(
+                bos.WITHDRAW_MUSD_TYPEHASH(), abi.encode(amount, borrower, recipient), bos.getNonce(borrower), deadline
+            )
+        );
+        bytes32 digest = keccak256(abi.encodePacked(hex"1901", bos.DOMAIN_SEPARATOR(), structHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
+        return MezherPay.BorrowSig({
+            upperHint: address(0), lowerHint: address(0), deadline: deadline, signature: abi.encodePacked(r, s, v)
+        });
     }
 
     function _payment(address payer_, address merchant_, uint256 amount, uint256 fromBalance)
@@ -149,5 +167,95 @@ contract MezherPayTest is Test {
 
         assertEq(musd.balanceOf(merchant) - merchantBefore, bounded, "merchant delta");
         assertEq(payerBefore - musd.balanceOf(payer), bounded, "payer delta");
+    }
+
+    function test_pay_borrowOnly_mintsToMerchant() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        uint256 payerBefore = musd.balanceOf(payer);
+
+        mezherPay.pay(
+            _payment(payer, merchant, 7e18, 0),
+            _permitSig(payerPk, payer, 0, deadline),
+            _borrowSig(payerPk, 7e18, payer, merchant, deadline)
+        );
+
+        assertEq(musd.balanceOf(merchant), 7e18, "merchant received borrow");
+        assertEq(musd.balanceOf(payer), payerBefore, "payer balance untouched");
+        assertEq(bos.debt(payer), 7.007e18, "debt up by borrow + 0.1% fee");
+    }
+
+    function test_pay_split_5plus7() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        // Payer holds exactly 5 MUSD so a 12 MUSD payment needs a 7 MUSD borrow.
+        uint256 excess = musd.balanceOf(payer) - 5e18;
+        vm.prank(payer);
+        musd.transfer(address(1), excess);
+
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 5e18, deadline);
+        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, merchant, deadline);
+
+        vm.expectEmit(true, true, true, true);
+        emit MezherPay.Paid(orderId, payer, merchant, 12e18, 5e18, 7e18);
+        mezherPay.pay(_payment(payer, merchant, 12e18, 5e18), permit, borrow);
+
+        assertEq(musd.balanceOf(merchant), 12e18, "merchant received full amount");
+        assertEq(musd.balanceOf(payer), 0, "payer spent its balance part");
+        assertEq(bos.debt(payer), 7.007e18, "debt up by borrow + fee");
+    }
+
+    function testRevert_borrowSigForOtherRecipient() public {
+        address attacker = makeAddr("attacker");
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 0, deadline);
+        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, attacker, deadline);
+
+        vm.expectRevert("BorrowerOperationsSignatures: Invalid signature");
+        mezherPay.pay(_payment(payer, merchant, 7e18, 0), permit, borrow);
+
+        assertEq(musd.balanceOf(merchant), 0, "merchant unchanged");
+        assertEq(musd.balanceOf(attacker), 0, "attacker unchanged");
+    }
+
+    function testRevert_borrowSigExpired() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 0, deadline);
+        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, merchant, deadline);
+
+        vm.warp(deadline + 1);
+        vm.expectRevert("Signature expired");
+        mezherPay.pay(_payment(payer, merchant, 7e18, 0), permit, borrow);
+    }
+
+    function testRevert_icrBelowFloor() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 0, deadline);
+        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, merchant, deadline);
+        troveManager.setIcr(1.499e18);
+
+        vm.expectRevert(abi.encodeWithSelector(MezherPay.IcrBelowFloor.selector, 1.499e18));
+        mezherPay.pay(_payment(payer, merchant, 7e18, 0), permit, borrow);
+
+        assertEq(musd.balanceOf(merchant), 0, "payment is atomic");
+    }
+
+    function test_pay_icrExactlyFloor_succeeds() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 0, deadline);
+        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, merchant, deadline);
+        troveManager.setIcr(1.5e18);
+
+        mezherPay.pay(_payment(payer, merchant, 7e18, 0), permit, borrow);
+
+        assertEq(musd.balanceOf(merchant), 7e18, "merchant paid at the floor");
+    }
+
+    function test_pay_fromBalanceOnly_skipsIcrCheck() public {
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, deadline);
+        troveManager.setIcr(1e18);
+
+        mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), permit, _noBorrowSig());
+
+        assertEq(musd.balanceOf(merchant), 12e18, "no borrow means no ICR guard");
     }
 }

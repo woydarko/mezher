@@ -113,6 +113,14 @@ contract MezherPay {
 
         uint256 borrowed = p.amount - p.fromBalance;
 
+        if (borrowed > 0) {
+            bos.withdrawMUSDWithSignature(
+                borrowed, borrow.upperHint, borrow.lowerHint, p.payer, p.merchant, borrow.signature, borrow.deadline
+            );
+            uint256 icr = troveManager.getCurrentICR(p.payer, priceFeed.fetchPrice());
+            if (icr < MIN_ICR_AFTER) revert IcrBelowFloor(icr);
+        }
+
         emit Paid(p.orderId, p.payer, p.merchant, p.amount, p.fromBalance, borrowed);
     }
 }
