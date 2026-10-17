@@ -47,7 +47,7 @@ Web3 split 15% / 50% / 15% / 20% over 2026-10-18 00:15 -> 2026-10-26 20:00 +0700
 | 1 Intake | Done | - | 2026-10-17 23:00 -> 2026-10-18 00:15 | 2026-10-18 00:15 | |
 | 2 Design + docs | Done — approved by owner (incl. EVM-only payers, Vercel) | 21.75 h | 2026-10-18 00:15 -> 2026-10-18 22:00 | 2026-10-18 01:05 | 8-doc bundle + DEPLOYMENTS.md written; brainstorming questions skipped (owner delegated design: "recommend dri lu") |
 | 3 Plan | Done — approved by owner; build via Orca | 10 h | 2026-10-18 22:00 -> 2026-10-19 08:00 | 2026-10-18 00:39 | docs/superpowers/plans/2026-10-18-mezher-mvp.md (11 core tasks + 4 stretch). No worktree (owner: work in place; build via Orca) |
-| 4 Build | Not started | 105.83 h | 2026-10-19 08:00 -> 2026-10-23 17:50 | | testnet walking skeleton by 2026-10-21 02:00 (~40%) |
+| 4 Build | In progress | 105.83 h | 2026-10-19 08:00 -> 2026-10-23 17:50 | | testnet walking skeleton by 2026-10-21 02:00 (~40%) |
 | 5 Verify + audit | Not started | 31.75 h | 2026-10-23 17:50 -> 2026-10-25 01:35 | | |
 | 6 Demo and submit | Not started | 42.42 h | 2026-10-25 01:35 -> 2026-10-26 20:00 | | internal submit 2026-10-26 08:00 |
 
@@ -81,6 +81,7 @@ Over-budget warnings sent: none
 | Time | Time left | Core done / total | Cut decision |
 | --- | --- | --- | --- |
 | 2026-10-18 00:15 +0700 | 211.75 h | 0 / TBD | none |
+| 2026-10-18 02:15 +0700 | ~209.75 h | Tasks 1–10 code + tests done (Tasks 3, 9, 10 wait on the testnet deploy for their manual/on-chain steps); Task 11 needs owner OK | none |
 
 ## Unresolved
 - Deadline timezone (JST vs other) - owner: user (deferred)
