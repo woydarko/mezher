@@ -90,18 +90,18 @@ web/
   ```
   `IMezo.sol`: `IBorrowerOperationsSignatures.withdrawMUSDWithSignature(uint256 _amount, address _upperHint, address _lowerHint, address _borrower, address _recipient, bytes memory _signature, uint256 _deadline)` and `getNonce(address) returns (uint256)`; `ITroveManager.getCurrentICR(address,uint256) returns (uint256)`; `IPriceFeed.fetchPrice() external view returns (uint256)`.
 
-- [ ] **Step 1: Scaffold.** `cd contracts && forge init --no-git --force .` (delete the Counter example files), `forge install OpenZeppelin/openzeppelin-contracts@v5.1.0 --no-git`, `foundry.toml` with `solc_version = "0.8.28"`, `evm_version = "london"`, `optimizer = true`, `optimizer_runs = 200`, `[rpc_endpoints] mezo_testnet = "${MEZO_TESTNET_RPC_URL}"`. Run `forge build`; expected: compiles.
-- [ ] **Step 2: Write failing tests** in `MezherPay.t.sol` (mocks deployed in `setUp`; `(payer, payerPk) = makeAddrAndKey("payer")`; MockMUSD mints 100e18 to payer; permit signed with `vm.sign` over the MockMUSD domain):
+- [x] **Step 1: Scaffold.** `cd contracts && forge init --no-git --force .` (delete the Counter example files), `forge install OpenZeppelin/openzeppelin-contracts@v5.1.0 --no-git`, `foundry.toml` with `solc_version = "0.8.28"`, `evm_version = "london"`, `optimizer = true`, `optimizer_runs = 200`, `[rpc_endpoints] mezo_testnet = "${MEZO_TESTNET_RPC_URL}"`. Run `forge build`; expected: compiles.
+- [x] **Step 2: Write failing tests** in `MezherPay.t.sol` (mocks deployed in `setUp`; `(payer, payerPk) = makeAddrAndKey("payer")`; MockMUSD mints 100e18 to payer; permit signed with `vm.sign` over the MockMUSD domain):
   - `test_pay_fromBalanceOnly_movesExactAmount`: amount 12e18, fromBalance 12e18 → merchant +12e18, payer −12e18; the borrow mock is never called.
   - `test_pay_emitsPaid`: `vm.expectEmit(true, true, true, true)` with `Paid(orderId, payer, merchant, 12e18, 12e18, 0)`.
   - `testRevert_zeroMerchant` / `testRevert_zeroPayer` → `ZeroAddress`; `testRevert_zeroAmount` → `ZeroAmount`; `testRevert_fromBalanceExceedsAmount` (fromBalance 13e18, amount 12e18) → `FromBalanceExceedsAmount`.
   - `testRevert_permitFromOtherKey`: permit signed by another key → `pay` reverts (permit failure swallowed, then OZ `ERC20InsufficientAllowance`); merchant balance unchanged.
   - `test_pay_permitFrontRun_stillSucceeds`: submit the permit directly to MockMUSD first, then `pay()` with the same permit → succeeds.
   - `testFuzz_pay_fromBalanceOnly(uint96 amount)`: bound to 1..100e18 → merchant delta == amount, payer delta == amount.
-- [ ] **Step 3: Run** `forge test --match-contract MezherPayTest -vvv`; expected: FAIL (MezherPay missing).
-- [ ] **Step 4: Implement `MezherPay`.** Immutables for the 4 constructor args (revert `ZeroAddress` on a zero arg). `pay` order: validate (`payer`, `merchant` non-zero; `amount > 0`; `fromBalance <= amount`) → if `fromBalance > 0`: `try IERC20Permit(address(musd)).permit(p.payer, address(this), p.fromBalance, permit.deadline, permit.v, permit.r, permit.s) {} catch {}` then `musd.safeTransferFrom(p.payer, p.merchant, p.fromBalance)` → compute `borrowed = amount - fromBalance` (borrow call added in Task 2) → `emit Paid(...)`. NatSpec on every external item.
-- [ ] **Step 5: Run** the test command → all PASS; `forge fmt --check` → no diff.
-- [ ] **Step 6: Commit** `feat(contracts): MezherPay balance-only payments with permit`.
+- [x] **Step 3: Run** `forge test --match-contract MezherPayTest -vvv`; expected: FAIL (MezherPay missing).
+- [x] **Step 4: Implement `MezherPay`.** Immutables for the 4 constructor args (revert `ZeroAddress` on a zero arg). `pay` order: validate (`payer`, `merchant` non-zero; `amount > 0`; `fromBalance <= amount`) → if `fromBalance > 0`: `try IERC20Permit(address(musd)).permit(p.payer, address(this), p.fromBalance, permit.deadline, permit.v, permit.r, permit.s) {} catch {}` then `musd.safeTransferFrom(p.payer, p.merchant, p.fromBalance)` → compute `borrowed = amount - fromBalance` (borrow call added in Task 2) → `emit Paid(...)`. NatSpec on every external item.
+- [x] **Step 5: Run** the test command → all PASS; `forge fmt --check` → no diff.
+- [x] **Step 6: Commit** `feat(contracts): MezherPay balance-only payments with permit`.
 
 ### Task 2: Borrow-to-merchant path + ICR floor (core, F-03, F-04)
 
