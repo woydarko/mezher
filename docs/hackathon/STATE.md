@@ -86,4 +86,5 @@ Over-budget warnings sent: none
 - Deadline timezone (JST vs other) - owner: user (deferred)
 - Testnet faucet amount per claim vs the ~0.037 BTC needed for a 2,000 MUSD Trove at 150% ICR - owner: me (check wallet balance)
 - Resolved: nonce getter is `getNonce(address)`; `fetchPrice()` is view; smart-account path out of scope (EVM-only payers approved).
-- WalletConnect project id needed by Mezo Passport `getConfig`? - owner: builder (Task 4)
+- Resolved 2026-10-18: Passport `getConfig` requires a `walletConnectProjectId` string; empty works for MetaMask, a real id is needed only for WalletConnect QR wallets.
+- `mezher-deployer` Foundry keystore not imported yet → MezherPay testnet deploy (Task 3 steps 3–5) waits - owner: user

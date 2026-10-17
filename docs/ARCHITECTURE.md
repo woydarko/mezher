@@ -116,4 +116,4 @@ Confirmed by evidence:
 Proposals (owner approval needed): the whole stack above; Vercel hosting; EVM-only payers; ICR floor 150% hard-coded; no on-chain order uniqueness.
 Unknowns (owner: builder, resolve in Phase 4 tests):
 - Whether `getCurrentICR` includes pending rewards/interest exactly as the post-borrow check needs (fork test asserts behaviour).
-- Whether `@mezo-org/passport` `getConfig` needs a WalletConnect project id.
+- Resolved 2026-10-18: `@mezo-org/passport@0.17.2` `getConfig` types `walletConnectProjectId: string` as required. Web passes `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? ""`; injected wallets (MetaMask) need no id; WalletConnect QR wallets need a real id from cloud.reown.com.

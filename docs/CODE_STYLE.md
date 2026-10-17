@@ -48,7 +48,7 @@ Status: **Proposal - needs approval** (Phase 2 gate). No code exists yet; comman
 - Every new screen state from DESIGN_SYSTEM exists.
 
 ## Verified commands
-- Format: `cd contracts && forge fmt --check` (ran 2026-10-18, clean). Web: Not configured until the scaffold task (planned `pnpm prettier --check .`).
-- Lint: Not configured (planned: `pnpm lint` → `next lint` in `web/`).
-- Type check: `cd contracts && forge build` (ran 2026-10-18, compiles). Web: Not configured (planned `pnpm tsc --noEmit`).
+- Format: `cd contracts && forge fmt --check` (ran 2026-10-18, clean). Web: Prettier not configured (lint covers style).
+- Lint: `cd web && pnpm lint` (ran 2026-10-18, no warnings).
+- Type check: `cd contracts && forge build` (ran 2026-10-18, compiles). Web: `cd web && pnpm tsc --noEmit` and `cd web && pnpm build` (ran 2026-10-18, pass).
 Never invent commands or claim checks passed without running them. The scaffold task replaces "Not configured" with the real commands after running them once.

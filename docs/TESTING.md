@@ -59,7 +59,7 @@ Before submission, these must work on Mezo testnet: the golden path J1 (PRD F-01
 - Unit: `cd contracts && forge test --match-contract MezherPayTest -vv` (ran 2026-10-18).
 - Fork: `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vv` (ran 2026-10-18; ~280 s, the public RPC is slow).
 - End-to-end: Not configured (manual testnet run per `docs/DEMO.md`).
-- Build/format: `cd contracts && forge build`, `cd contracts && forge fmt --check` (ran 2026-10-18). Web: Not configured until the scaffold task.
+- Build/format: `cd contracts && forge build`, `cd contracts && forge fmt --check` (ran 2026-10-18). Web: `cd web && pnpm vitest run`, `cd web && pnpm build`, `cd web && pnpm lint` (ran 2026-10-18).
 - Coverage: Not configured (planned: `cd contracts && forge coverage --ir-minimum` if needed).
 
 ## Release criteria
@@ -71,3 +71,4 @@ All "Unit", "Fork" and "Unit (vitest)" rows Passed; F-03/F-04/Permissions rows p
 | 2026-10-18 | `forge test --match-contract MezherPayTest -vv` | 16 passed, 0 failed | — |
 | 2026-10-18 | `MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vv` | 4 passed, 0 failed (276 s) | `PriceFeed.fetchPrice()` is mocked with `vm.mockCall` at 81,384e18: Mezo reads prices from the native precompile `0x7b7c…0015`, which does not exist in revm and makes the real PriceFeed recurse until it reverts. Live value checked with `cast call` the same day: 81,384.678e18. Every other contract in the fork flow is the real one. |
 | 2026-10-18 | `forge fmt --check` / `forge build` | clean / compiles | — |
+| 2026-10-18 | `cd web && pnpm vitest run` / `pnpm build` / `pnpm lint` | 3 passed / builds / clean | Build needs `transpilePackages` for Mezo orangekit (ships raw TS), an IgnorePlugin for optional `@x402/*` imports, and client-only wallet providers (Passport touches `document` at import). `pino-pretty` warning from wagmi is harmless. |
