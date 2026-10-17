@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { BaseError, ContractFunctionRevertedError, zeroAddress, type Address, type Hex } from "viem";
@@ -25,6 +26,7 @@ import { getBorrowHints } from "@/lib/hints";
 import { parseLink, type PayLink } from "@/lib/link";
 import {
   ADDRESSES,
+  MEZHER_PAY_DEPLOY_BLOCK,
   MEZO_TESTNET,
   borrowerOperationsAbi,
   borrowerOpsSignaturesAbi,
@@ -35,11 +37,12 @@ import {
   priceFeedAbi,
   troveManagerAbi,
 } from "@/lib/mezo";
+import { fetchPaidLogs, isOrderPaid } from "@/lib/paid-logs";
 import { icrE18, quote, type TroveState } from "@/lib/quote";
 import { permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
 
 const SIG_TTL_S = 15n * 60n; // client signature deadline: now + 15 minutes
-const ALREADY_PAID_CHECK = false; // flipped in Task 10 with the Paid-log reader
+const ALREADY_PAID_CHECK = true;
 const ZERO_32 = ("0x" + "0".repeat(64)) as Hex;
 const NO_PERMIT: PermitSig = { deadline: 0n, v: 27, r: ZERO_32, s: ZERO_32 };
 const NO_BORROW: BorrowSig = { upperHint: zeroAddress, lowerHint: zeroAddress, deadline: 0n, signature: "0x" };
@@ -157,6 +160,14 @@ function CheckoutFor({ link }: { link: PayLink }) {
       : undefined;
   // Snapshot of the split shown on the receipt; the live quote moves once the balance updates.
   const [paidSplit, setPaidSplit] = useState<{ fromBalanceWei: bigint; borrowWei: bigint } | null>(null);
+
+  const paidLogs = useQuery({
+    queryKey: ["paid", link.to, link.orderId],
+    enabled: ALREADY_PAID_CHECK && Boolean(publicClient && mezherPay),
+    queryFn: () =>
+      fetchPaidLogs(publicClient!, { merchant: link.to, orderId: link.orderId, fromBlock: MEZHER_PAY_DEPLOY_BLOCK }),
+  });
+  const alreadyPaid = paidLogs.data?.find((l) => isOrderPaid([l], link.orderId, link.amountWei));
 
   const { refetch } = reads;
   const confirm = useCallback(
@@ -293,6 +304,20 @@ function CheckoutFor({ link }: { link: PayLink }) {
     );
   }
 
+  if (alreadyPaid) {
+    return (
+      <main className="page">
+        <OrderCard link={link} />
+        <Card>
+          <StatusLine tone="success" href={explorerTx(alreadyPaid.txHash)}>
+            Already paid
+          </StatusLine>
+          <p>This order was paid by {short(alreadyPaid.payer)}. Nothing more to do.</p>
+        </Card>
+      </main>
+    );
+  }
+
   const busy = state.step === "signing_permit" || state.step === "signing_borrow" || state.step === "sending";
   let loadingLabel = "Sending…";
   if (q?.state === "ok" && state.step === "signing_permit")
@@ -343,8 +368,6 @@ function CheckoutFor({ link }: { link: PayLink }) {
               </SecondaryButton>
             </Card>
           )}
-
-          {ALREADY_PAID_CHECK && <StatusLine tone="success">Already paid</StatusLine>}
 
           {q?.state === "needs_trove" && (
             <Card title="Your Bitcoin credit">

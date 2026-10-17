@@ -281,11 +281,11 @@ web/
 **Interfaces:**
 - Produces: `type PaidLog = { orderId: Hex; payer: Address; merchant: Address; amountWei: bigint; fromBalanceWei: bigint; borrowedWei: bigint; txHash: Hex; blockNumber: bigint }`; `fetchPaidLogs(client: { getLogs: PublicClient["getLogs"]; getBlockNumber(): Promise<bigint> }, a: { merchant: Address; orderId?: Hex; fromBlock: bigint }): Promise<PaidLog[]>` (newest first, 10,000-block chunks); `isOrderPaid(logs: PaidLog[], orderId: Hex, amountWei: bigint): boolean` (true only when a log has the same orderId and amount ≥ requested).
 
-- [ ] **Step 1: Failing tests:** **`fetchPaidLogs splits range into 10k-block chunks`** (fake client, fromBlock 100, head 25,150 → 3 calls with ranges [100, 10099], [10100, 20099], [20100, 25150]); results sorted newest first; `isOrderPaid` is false when the logged amount is lower than requested (a 1-wei fake payment cannot mark an order paid).
-- [ ] **Step 2: Run** `pnpm vitest run test/paid-logs.test.ts` → FAIL.
-- [ ] **Step 3: Implement** the helpers; `/merchant` per W3 (connected address prefilled and editable; `buildLink` + `randomOrder`; copy button with a "Copied" state; payments list polling every 5 s with empty/loading/error states; label notice "Labels are visible to anyone with the link."); landing per W0; checkout "Already paid" state.
+- [x] **Step 1: Failing tests:** **`fetchPaidLogs splits range into 10k-block chunks`** (fake client, fromBlock 100, head 25,150 → 3 calls with ranges [100, 10099], [10100, 20099], [20100, 25150]); results sorted newest first; `isOrderPaid` is false when the logged amount is lower than requested (a 1-wei fake payment cannot mark an order paid).
+- [x] **Step 2: Run** `pnpm vitest run test/paid-logs.test.ts` → FAIL.
+- [x] **Step 3: Implement** the helpers; `/merchant` per W3 (connected address prefilled and editable; `buildLink` + `randomOrder`; copy button with a "Copied" state; payments list polling every 5 s with empty/loading/error states; label notice "Labels are visible to anyone with the link."); landing per W0; checkout "Already paid" state.
 - [ ] **Step 4: Run** unit tests → PASS; `pnpm build` → success; manual: create a link on `/merchant`, pay it from another browser profile, see it listed within 15 s, reopen the link → "Already paid".
-- [ ] **Step 5: Commit** `feat(web): merchant links, payments history and landing`.
+- [x] **Step 5: Commit** `feat(web): merchant links, payments history and landing`.
 
 ### Task 11: Ship the walking skeleton (core; deploy + docs sync)
 

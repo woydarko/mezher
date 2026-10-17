@@ -86,5 +86,5 @@ Over-budget warnings sent: none
 - Deadline timezone (JST vs other) - owner: user (deferred)
 - Testnet faucet amount per claim vs the ~0.037 BTC needed for a 2,000 MUSD Trove at 150% ICR - owner: me (check wallet balance)
 - Resolved: nonce getter is `getNonce(address)`; `fetchPrice()` is view; smart-account path out of scope (EVM-only payers approved).
-- Resolved 2026-10-18: Passport `getConfig` requires a `walletConnectProjectId` string; empty works for MetaMask, a real id is needed only for WalletConnect QR wallets.
+- Resolved 2026-10-18: Passport `getConfig` requires a non-empty `walletConnectProjectId` (RainbowKit throws on ""); a placeholder works for MetaMask, a real id from cloud.reown.com is needed for WalletConnect QR wallets - owner: user (before Vercel deploy)
 - `mezher-deployer` Foundry keystore not imported yet → MezherPay testnet deploy (Task 3 steps 3–5) waits - owner: user

@@ -29,6 +29,9 @@ export const ADDRESSES = {
   mezherPay: process.env.NEXT_PUBLIC_MEZHER_PAY_ADDRESS as Address | undefined,
 } as const;
 
+/** First block to scan for Paid events (the MezherPay deploy block). */
+export const MEZHER_PAY_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK || "0");
+
 export const musdAbi = [
   {
     type: "function",

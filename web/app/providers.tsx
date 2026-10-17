@@ -11,8 +11,9 @@ import { Header } from "@/components/Header";
 const wagmiConfig = getConfig({
   appName: "Mezher",
   mezoNetwork: "testnet",
-  // Passport's type requires it; injected wallets (MetaMask) work without a real WalletConnect id.
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "",
+  // RainbowKit throws on an empty id. Injected wallets (MetaMask) never use it; WalletConnect QR wallets
+  // need a real id from cloud.reown.com.
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "mezher-no-walletconnect",
   ssr: true,
 });
 
