@@ -35,7 +35,7 @@ Our contracts:
 | Deployer | 0xf5C402e9eAf95f2d3f84Ed02bE7A453cc65A68Fb | Foundry encrypted keystore account `mezher-deployer` (burner). Its key was pasted in a chat session on 2026-10-18: treat as exposed, rotate before submission; it holds no role in MezherPay (no owner) |
 | Admin / owner | None — `MezherPay` has no owner or admin functions | n/a |
 | Relayer | TBD | Vercel server env `RELAYER_PRIVATE_KEY` (burner, ≤ 0.01 test BTC float) |
-| Demo payer wallet | TBD (owner's burner wallet, faucet funded 2026-10-18 per owner) | MetaMask on the demo laptop |
+| Demo payer wallet | 0xe8167000c65634db91131c73c4221b361053786e (2026-10-19: Trove active, coll 0.05 BTC, debt 2,001.8 MUSD, ICR 202%, wallet 5 MUSD) | MetaMask on the demo laptop |
 | Demo merchant wallet | TBD | Second browser profile |
 
 ## Demo state
