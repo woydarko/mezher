@@ -60,7 +60,8 @@ contract MezherPayForkTest is Test {
     IMusd internal constant MUSD = IMusd(0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503);
     IBorrowerOperationsSignatures internal constant BOS =
         IBorrowerOperationsSignatures(0xD757e3646AF370b15f32EB557F0F8380Df7D639e);
-    IBorrowerOperations internal constant BORROWER_OPS = IBorrowerOperations(0xCdF7028ceAB81fA0C6971208e83fa7872994beE5);
+    IBorrowerOperations internal constant BORROWER_OPS =
+        IBorrowerOperations(0xCdF7028ceAB81fA0C6971208e83fa7872994beE5);
     ITroveManagerFork internal constant TROVE_MANAGER = ITroveManagerFork(0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0);
     IPriceFeed internal constant PRICE_FEED = IPriceFeed(0x86bCF0841622a5dAC14A313a15f96A95421b9366);
 
@@ -83,9 +84,7 @@ contract MezherPayForkTest is Test {
         // Mezo prices come from the native oracle precompile 0x7b7c…0015, which does not exist in
         // revm: on a fork its fallback recurses until the call reverts. Pin the price instead; every
         // other contract in the flow stays real.
-        vm.mockCall(
-            address(PRICE_FEED), abi.encodeWithSelector(IPriceFeed.fetchPrice.selector), abi.encode(FORK_PRICE)
-        );
+        vm.mockCall(address(PRICE_FEED), abi.encodeWithSelector(IPriceFeed.fetchPrice.selector), abi.encode(FORK_PRICE));
 
         mezherPay = new MezherPay(IERC20(address(MUSD)), BOS, ITroveManager(address(TROVE_MANAGER)), PRICE_FEED);
 
@@ -135,10 +134,7 @@ contract MezherPayForkTest is Test {
         bytes32 digest = keccak256(abi.encodePacked(hex"1901", bosDomainSeparator, structHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(payerPk, digest);
         return MezherPay.BorrowSig({
-            upperHint: address(0),
-            lowerHint: address(0),
-            deadline: deadline,
-            signature: abi.encodePacked(r, s, v)
+            upperHint: address(0), lowerHint: address(0), deadline: deadline, signature: abi.encodePacked(r, s, v)
         });
     }
 
@@ -148,11 +144,7 @@ contract MezherPayForkTest is Test {
         returns (MezherPay.Payment memory)
     {
         return MezherPay.Payment({
-            payer: payer,
-            merchant: merchant_,
-            amount: amount,
-            fromBalance: fromBalance,
-            orderId: orderId
+            payer: payer, merchant: merchant_, amount: amount, fromBalance: fromBalance, orderId: orderId
         });
     }
 
