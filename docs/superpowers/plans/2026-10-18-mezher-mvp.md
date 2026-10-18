@@ -19,7 +19,7 @@
 - `MIN_ICR_AFTER = 1.5e18` (150%, 1e18 = 100%). Client signature deadline = now + 15 minutes. The relay rejects deadlines more than 1 hour ahead.
 - Mezo facts: Trove min net debt 1,800 MUSD + 200 MUSD gas compensation; borrowing fee 0.1% (`getBorrowingFee`); `PriceFeed.fetchPrice()` is `view` and returns USD per BTC with 18 decimals; `TroveManager.getTroveStatus` enum `1 = active`; `getCurrentICR(borrower, price)`; `getEntireDebtAndColl(borrower)` returns `(coll, principal, interest, pendingCollateral, pendingPrincipal, pendingInterest)`; `BorrowerOperations.openTrove(uint256 debtAmount, address upperHint, address lowerHint) payable`.
 - Amounts are `bigint` wei (18 decimals) in all logic; `formatUnits`/`parseUnits` only at the UI edge. No floats for money.
-- Relay limits: 5 requests/minute per payer and per IP → 429; dedupe (merchant, orderId, payer) for 10 minutes → 409; body > 4 KB → 413; relayer balance < 0.0005 BTC → 503.
+- Relay limits: 5 requests/minute per payer and per IP → 429; dedupe (merchant, orderId, payer) for 10 minutes → 409; body > 4 KB → 413; relayer balance < 0.000001 BTC → 503.
 - Link params: `to` address, `amount` decimal > 0 with ≤ 18 decimals, `order` 16–64 hex chars (bytes32 = left-padded), `label` ≤ 60 chars, optional.
 - UI: tokens and copy exactly as DESIGN_SYSTEM.md; dark only; no UI kit besides RainbowKit; no floating toasts; every screen ships empty/loading/error/success states.
 - Secrets: `RELAYER_PRIVATE_KEY` read only in `web/app/api/relay/route.ts`; deployer = Foundry keystore account `mezher-deployer`; never commit `.env`.

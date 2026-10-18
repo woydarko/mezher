@@ -6,7 +6,8 @@ const RATE_LIMIT = 5;
 const RATE_WINDOW_MS = 60_000;
 const DEDUPE_WINDOW_MS = 10 * 60_000;
 const MAX_DEADLINE_AHEAD_S = 3600n;
-const MIN_RELAYER_BALANCE_WEI = 5n * 10n ** 14n; // 0.0005 BTC
+// 0.000001 BTC: Mezo testnet gas was 146 wei on 2026-10-19, so this covers ~10k pay() calls (~700k gas each).
+const MIN_RELAYER_BALANCE_WEI = 10n ** 12n;
 
 const address = z
   .string()

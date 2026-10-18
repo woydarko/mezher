@@ -123,12 +123,19 @@ describe("relay handler", () => {
     expect(deps.send).toHaveBeenCalledTimes(1);
   });
 
-  it("returns 503 relayer_unavailable when the relayer balance is under 0.0005 BTC", async () => {
-    const { deps, handle } = setup({ relayerBalanceWei: vi.fn(async () => 5n * 10n ** 14n - 1n) });
+  it("returns 503 relayer_unavailable when the relayer balance is under 0.000001 BTC", async () => {
+    const { deps, handle } = setup({ relayerBalanceWei: vi.fn(async () => 10n ** 12n - 1n) });
     const res = await handle(req(body()));
     expect(res.status).toBe(503);
     expect((await res.json()).error).toBe("relayer_unavailable");
     expect(deps.send).not.toHaveBeenCalled();
+  });
+
+  it("relays when the relayer balance is exactly 0.000001 BTC", async () => {
+    const { deps, handle } = setup({ relayerBalanceWei: vi.fn(async () => 10n ** 12n) });
+    const res = await handle(req(body()));
+    expect(res.status).toBe(200);
+    expect(deps.send).toHaveBeenCalledTimes(1);
   });
 
   it("rejects deadlines more than 1 hour ahead with 400", async () => {

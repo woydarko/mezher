@@ -69,7 +69,7 @@ Rules: `borrowed = amount − fromBalance`; anyone may call `pay()` (relayer or 
 - 409 `{ error: "already_relayed" }` — the same (merchant, orderId, payer) was sent in the last 10 minutes (in-memory).
 - 422 `{ error: "simulation_failed", reason }` — `pay()` would revert (decoded custom error or Mezo revert string).
 - 429 `{ error: "rate_limited" }` — > 5 requests/minute per payer or per IP.
-- 503 `{ error: "relayer_unavailable" }` — relayer key missing or balance below 0.0005 BTC.
+- 503 `{ error: "relayer_unavailable" }` — relayer key missing or balance below 0.000001 BTC (testnet gas ~146 wei, ~10k payments).
 
 **Events/jobs**: no background jobs. `Paid` is the only event consumer interface (merchant page polls `getLogs` filtered by `merchant`, from the deployment block). Idempotency: the relayer dedupe window plus the UI "already paid" check on events.
 
