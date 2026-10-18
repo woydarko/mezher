@@ -141,10 +141,10 @@ web/
   - `test_fork_icrFloor`: borrow an amount that drops ICR below 150% (computed from `getCurrentICR` and price) → reverts `IcrBelowFloor`.
   - `test_fork_thirdPartyCannotRedirect`: a relayer address calls `pay` with a different merchant → revert; balances unchanged.
 - [x] **Step 2: Run** `MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol -vvv` → PASS. If forking fails on RPC state limits, pin `--fork-block-number` to the latest `cast block-number --rpc-url https://rpc.test.mezo.org` and note it in TESTING.md.
-- [ ] **Step 3: Deploy script** `Deploy.s.sol`: `run()` broadcasts `new MezherPay(MUSD, BOS, TROVE_MANAGER, PRICE_FEED)` with the constants above and logs the address. The owner imports a burner once with `cast wallet import mezher-deployer --interactive` (owner types the key locally; never in chat). Deploy: `forge script script/Deploy.s.sol --rpc-url mezo_testnet --account mezher-deployer --broadcast`. Expected: address printed, tx visible on the explorer.
-- [ ] **Step 4: Verify on-chain.** `cast call <addr> "MIN_ICR_AFTER()(uint256)" --rpc-url https://rpc.test.mezo.org` → `1500000000000000000`. Try `forge verify-contract <addr> src/MezherPay.sol:MezherPay --verifier blockscout --verifier-url https://explorer.test.mezo.org/api`; if unsupported, record "not verified: <reason>".
-- [ ] **Step 5: Docs.** DEPLOYMENTS.md row for MezherPay (address, deploy tx link, verified yes/no, deploy block); CODE_STYLE/TESTING "Verified commands" replaced with the commands that actually ran; a TESTING Results row with the date and outcome.
-- [ ] **Step 6: Commit** `feat(contracts): fork tests on Mezo testnet and deploy MezherPay`.
+- [x] **Step 3: Deploy script** `Deploy.s.sol`: `run()` broadcasts `new MezherPay(MUSD, BOS, TROVE_MANAGER, PRICE_FEED)` with the constants above and logs the address. The owner imports a burner once with `cast wallet import mezher-deployer --interactive` (owner types the key locally; never in chat). Deploy: `forge script script/Deploy.s.sol --rpc-url mezo_testnet --account mezher-deployer --broadcast`. Expected: address printed, tx visible on the explorer.
+- [x] **Step 4: Verify on-chain.** `cast call <addr> "MIN_ICR_AFTER()(uint256)" --rpc-url https://rpc.test.mezo.org` → `1500000000000000000`. Try `forge verify-contract <addr> src/MezherPay.sol:MezherPay --verifier blockscout --verifier-url https://explorer.test.mezo.org/api`; if unsupported, record "not verified: <reason>".
+- [x] **Step 5: Docs.** DEPLOYMENTS.md row for MezherPay (address, deploy tx link, verified yes/no, deploy block); CODE_STYLE/TESTING "Verified commands" replaced with the commands that actually ran; a TESTING Results row with the date and outcome.
+- [x] **Step 6: Commit** `feat(contracts): fork tests on Mezo testnet and deploy MezherPay`.
 
 ### Task 4: Web scaffold, tokens, providers, base components (core, F-01)
 

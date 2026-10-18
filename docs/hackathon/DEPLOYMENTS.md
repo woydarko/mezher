@@ -27,12 +27,12 @@ Mezo contracts we integrate with (deployed by Mezo, from `mezo-org/musd` `solidi
 Our contracts:
 | Name | Address / program ID | Deploy tx | Verified on explorer | Source path |
 | --- | --- | --- | --- | --- |
-| MezherPay | Not deployed yet | — | — | contracts/src/MezherPay.sol |
+| MezherPay | [0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2) (deploy block 16228993, 2026-10-18) | [0xa5621587…e5f4](https://explorer.test.mezo.org/tx/0xa562158792e47ecfa5095b501c1c9f5287f5bddce6a313db00f184d5934ee5f4) | Yes, Blockscout 2026-10-18 ([source](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2?tab=contract)) | contracts/src/MezherPay.sol (solc 0.8.28, london, optimizer 200) |
 
 ## Roles and keys (names only)
 | Role | Address | Key storage |
 | --- | --- | --- |
-| Deployer | TBD | Foundry encrypted keystore account `mezher-deployer` (burner) |
+| Deployer | 0xf5C402e9eAf95f2d3f84Ed02bE7A453cc65A68Fb | Foundry encrypted keystore account `mezher-deployer` (burner). Its key was pasted in a chat session on 2026-10-18: treat as exposed, rotate before submission; it holds no role in MezherPay (no owner) |
 | Admin / owner | None — `MezherPay` has no owner or admin functions | n/a |
 | Relayer | TBD | Vercel server env `RELAYER_PRIVATE_KEY` (burner, ≤ 0.01 test BTC float) |
 | Demo payer wallet | TBD (owner's burner wallet, faucet funded 2026-10-18 per owner) | MetaMask on the demo laptop |
@@ -47,7 +47,7 @@ Our contracts:
 ## Frontend config
 - Env var names (not values): `NEXT_PUBLIC_CHAIN_ID`, `NEXT_PUBLIC_RPC_URL`, `NEXT_PUBLIC_EXPLORER_URL`, `NEXT_PUBLIC_MEZHER_PAY_ADDRESS`, `NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` (if required), `RELAYER_PRIVATE_KEY` (server only).
 - Network switch / add-network prompt tested with a fresh wallet: No (not built yet).
-- ABI / IDL committed at: `web/lib/abi/MezherPay.json` (after the first deploy).
+- ABI committed at: `web/lib/abi/MezherPay.ts` (typed `as const`, generated from `contracts/out/MezherPay.sol/MezherPay.json`).
 
 ## Known risks (honest list)
 - Testnet only; AI-assisted audit only (x-ray / solidity-auditor), not a professional audit.
