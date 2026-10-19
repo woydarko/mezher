@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { DemoMockup } from "@/components/DemoMockup";
 import { Doodle } from "@/components/Doodle";
+import { FaqItem } from "@/components/FaqItem";
 import { HeroScenery } from "@/components/HeroScenery";
 import { Reveal } from "@/components/Reveal";
 import styles from "@/components/ui.module.css";
@@ -119,10 +120,7 @@ export default function Home() {
         </h2>
         <div className={l.faq}>
           {FAQ.map((f) => (
-            <details key={f.q} className={l.qa}>
-              <summary>{f.q}</summary>
-              <p>{f.a}</p>
-            </details>
+            <FaqItem key={f.q} q={f.q} a={f.a} className={l.qa} />
           ))}
         </div>
       </section>
