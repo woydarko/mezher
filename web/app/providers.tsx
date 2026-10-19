@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig, mezoTestnet } from "@mezo-org/passport";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
+import { ConnectGate } from "@/components/ConnectGate";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 
@@ -31,7 +32,7 @@ export function Providers({ children }: { children: ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider initialChain={mezoTestnet} theme={walletTheme}>
           <Header />
-          {children}
+          <ConnectGate>{children}</ConnectGate>
           <Footer />
         </RainbowKitProvider>
       </QueryClientProvider>

@@ -53,6 +53,11 @@
   font-weight: 700;
 }
 
+/* keeps the wallet button on the right when the nav is hidden */
+.navSpacer {
+  margin-left: auto;
+}
+
 .navLink {
   position: relative;
   display: inline-flex;

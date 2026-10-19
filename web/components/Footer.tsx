@@ -1,9 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useAccount } from "wagmi";
 import { ADDRESSES, explorerAddress } from "@/lib/mezo";
 import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
 export function Footer() {
+  const { isConnected } = useAccount();
   return (
     <footer className={styles.footer}>
       <div className={styles.footerGrid}>
@@ -15,12 +19,15 @@ export function Footer() {
           <p>Pay with your Bitcoin. Keep your Bitcoin.</p>
         </div>
 
-        <nav className={styles.footerLinks} aria-label="Footer">
-          <span className={styles.footerHeading}>Use it</span>
-          <Link href="/pay">Pay</Link>
-          <Link href="/merchant">Get paid</Link>
-          <Link href="/dashboard">Dashboard</Link>
-        </nav>
+        {/* app links only once a wallet is connected, like the header */}
+        {isConnected && (
+          <nav className={styles.footerLinks} aria-label="Footer">
+            <span className={styles.footerHeading}>Use it</span>
+            <Link href="/pay">Pay</Link>
+            <Link href="/merchant">Get paid</Link>
+            <Link href="/dashboard">Dashboard</Link>
+          </nav>
+        )}
 
         <nav className={styles.footerLinks} aria-label="On-chain">
           <span className={styles.footerHeading}>On-chain</span>
