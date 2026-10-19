@@ -49,9 +49,15 @@ function json(status: number, body: unknown): Response {
   return Response.json(body, { status });
 }
 
-function log(status: number, payer?: Address, hash?: Hex) {
-  // SECURITY.md: route, status, payer prefix and hash only; never bodies or signatures.
-  console.info(JSON.stringify({ route: "/api/relay", status, payer: payer?.slice(0, 6), hash }));
+function log(status: number, payer?: Address, hash?: Hex, error?: string) {
+  // SECURITY.md: route, status, payer prefix, hash and a short error only; never bodies or signatures.
+  console.info(JSON.stringify({ route: "/api/relay", status, payer: payer?.slice(0, 6), hash, error }));
+}
+
+/** viem's shortMessage has no request args (calldata carries the signatures); fall back to the class name. */
+function shortError(err: unknown): string {
+  const short = (err as { shortMessage?: unknown })?.shortMessage;
+  return typeof short === "string" ? short : err instanceof Error ? err.name : "unknown";
 }
 
 export function createRelayHandler(deps: RelayDeps): (req: Request) => Promise<Response> {
@@ -129,9 +135,9 @@ export function createRelayHandler(deps: RelayDeps): (req: Request) => Promise<R
       relayed.set(dedupeKey, now);
       log(200, payer, hash);
       return json(200, { hash });
-    } catch {
+    } catch (err) {
       // RPC or key failure: the client falls back to "Pay with my own gas".
-      log(503, payer);
+      log(503, payer, undefined, shortError(err));
       return json(503, { error: "relayer_unavailable" });
     }
   };

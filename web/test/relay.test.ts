@@ -131,6 +131,18 @@ describe("relay handler", () => {
     expect(deps.send).not.toHaveBeenCalled();
   });
 
+  it("logs the short error reason on a send failure, never the request body", async () => {
+    const err = Object.assign(new Error("long message with calldata 0x3333"), { shortMessage: "HTTP request failed." });
+    const { handle } = setup({ send: vi.fn(async () => Promise.reject(err)) });
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    const res = await handle(req(body()));
+    expect(res.status).toBe(503);
+    const line = info.mock.calls.map((c) => String(c[0])).join("\n");
+    info.mockRestore();
+    expect(line).toContain("HTTP request failed.");
+    expect(line).not.toContain("3333");
+  });
+
   it("relays when the relayer balance is exactly 0.000001 BTC", async () => {
     const { deps, handle } = setup({ relayerBalanceWei: vi.fn(async () => 10n ** 12n) });
     const res = await handle(req(body()));
