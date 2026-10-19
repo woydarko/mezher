@@ -71,7 +71,7 @@ To pay you need a wallet on Mezo testnet with an MUSD Trove: get test BTC from t
 ```bash
 cd contracts && forge test --match-contract MezherPayTest                                     # 17 unit tests
 cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol   # 4 fork tests against the real Mezo contracts
-cd web && pnpm vitest run                                                                     # 68 tests: link parsing, quote/ICR, signatures, hints, relay, checkout, logs
+cd web && pnpm vitest run                                                                     # 76 tests: link parsing, quote/ICR, Trove opening, signatures, hints, relay, checkout, logs, QR
 cd web && pnpm build
 ```
 
@@ -92,7 +92,8 @@ Stack: Solidity 0.8.28 (EVM london) + Foundry + OpenZeppelin 5; Next.js 14, Reac
 ## Status and limits
 
 - Testnet only. MezherPay has had an AI-assisted security review, not a professional audit.
-- The payer needs an existing Trove; opening one from inside Mezher is next.
+- A payer without a Trove can open one from the checkout (`BorrowerOperations.openTrove`, BTC sent from their own wallet); this path is unit tested and checked against testnet with `eth_call`, not yet run end to end.
+- Merchants get a QR code of each payment link for paying at a counter.
 - The relay keeps its rate limit in memory per server instance.
 - Unpaid orders exist only inside their link; there is no database.
 
