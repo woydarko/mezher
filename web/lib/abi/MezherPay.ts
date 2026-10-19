@@ -230,6 +230,11 @@ export const mezherPayAbi = [
   },
   {
     "type": "error",
+    "name": "BalanceOnlyNeedsPayer",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "FromBalanceExceedsAmount",
     "inputs": []
   },

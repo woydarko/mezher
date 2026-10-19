@@ -36,7 +36,7 @@ Golden path (J1):
 3. `lib/quote.ts` computes `fromBalance = min(balance, amount)`, `borrow = amount − fromBalance`, `fee`, ICR now/after (`coll * price / debt`, 1e18 = 100%) and disables Pay below 150%.
 4. On **Pay**: if `fromBalance > 0`, the payer signs the MUSD EIP-2612 permit (domain `{name:"Mezo USD", version:"1", chainId:31611, verifyingContract:MUSD}`, spender = `MezherPay`, value = fromBalance, nonce = `MUSD.nonces(payer)`, deadline = now + 15 min). If `borrow > 0`, the client computes hints (`HintHelpers.getApproxHint` → `SortedTroves.findInsertPosition` with the post-borrow NICR) and the payer signs `WithdrawMUSD(uint256 amount,address borrower,address recipient,uint256 nonce,uint256 deadline)` (domain `{name:"BorrowerOperationsSignatures", version:"1", chainId:31611, verifyingContract:0xD757…639e}`, recipient = merchant, nonce = `BorrowerOperationsSignatures.getNonce(payer)`).
 5. The client `POST`s `/api/relay` with `{payment, permit, borrow}`. The server validates with zod, rate-limits by payer, `simulateContract(pay)`; on success `writeContract` from the relayer key and returns `{hash}`; on simulation failure it returns 422 with the decoded revert reason.
-6. `MezherPay.pay()` checks inputs → permit (try/catch) → `safeTransferFrom(payer → merchant, fromBalance)` → `withdrawMUSDWithSignature(borrow, hints, payer, merchant, sig, deadline)` → reads `getCurrentICR(payer, price)` and reverts `IcrBelowFloor` if < 1.5e18 → emits `Paid`.
+6. `MezherPay.pay()` checks inputs (a payment with no borrow must come from the payer: `BalanceOnlyNeedsPayer`) → permit (try/catch) → `safeTransferFrom(payer → merchant, fromBalance)` → `withdrawMUSDWithSignature(borrow, hints, payer, merchant, sig, deadline)` → reads `getCurrentICR(payer, price)` and reverts `IcrBelowFloor` if < 1.5e18 → emits `Paid`.
 7. The client waits for the receipt (`waitForTransactionReceipt`), shows the Receipt screen with the explorer link and the new ratio. `/merchant` picks the event up on its next poll (every 5 s).
 Failure: any revert → nothing moves (atomic) and the UI shows the reason with Retry. Relayer unavailable (network error/5xx) → "Pay with my own gas": the payer's wallet calls `pay()` directly with the same signatures.
 
@@ -56,9 +56,10 @@ event Paid(bytes32 indexed orderId, address indexed payer, address indexed merch
            uint256 amount, uint256 fromBalance, uint256 borrowed);
 
 error ZeroAddress(); error ZeroAmount(); error FromBalanceExceedsAmount();
+error BalanceOnlyNeedsPayer();
 error IcrBelowFloor(uint256 icr);
 ```
-Rules: `borrowed = amount − fromBalance`; anyone may call `pay()` (relayer or payer); signatures bind payer, merchant and amounts, so the caller cannot redirect funds. `orderId` is informational (event only, no on-chain uniqueness; avoids a griefing vector where a third party pre-marks an order as paid). Double-pay protection is client + relayer side (see below).
+Rules: `borrowed = amount − fromBalance`; anyone may call `pay()` when it borrows (relayer or payer), because Mezo's `WithdrawMUSD` signature binds the merchant as recipient; a payment with `borrowed == 0` must be sent by the payer, because the MUSD permit names no merchant and a third party holding it could otherwise pick itself (found in the 2026-10-19 review, test `testRevert_thirdPartyRedirectsBalancePart`). The checkout sends balance-only payments from the payer's wallet (own gas). Residual: a front-runner holding both signatures can resubmit with another `orderId` or a smaller `fromBalance` (same merchant, no theft) so the order reads unpaid. `orderId` is informational (event only, no on-chain uniqueness; avoids a griefing vector where a third party pre-marks an order as paid). Double-pay protection is client + relayer side (see below).
 
 **Mezo interfaces used** (minimal, in `contracts/src/interfaces/`): `IBorrowerOperationsSignatures.withdrawMUSDWithSignature(uint256,address,address,address,address,bytes,uint256)` and `getNonce(address)`; `ITroveManager.getCurrentICR(address,uint256)`; `IPriceFeed.fetchPrice()`; `IERC20Permit.permit` on MUSD.
 

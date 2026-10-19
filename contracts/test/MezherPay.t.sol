@@ -90,9 +90,9 @@ contract MezherPayTest is Test {
 
     function test_pay_fromBalanceOnly_movesExactAmount() public {
         uint256 deadline = block.timestamp + 15 minutes;
-        mezherPay.pay(
-            _payment(payer, merchant, 12e18, 12e18), _permitSig(payerPk, payer, 12e18, deadline), _noBorrowSig()
-        );
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, deadline);
+        vm.prank(payer);
+        mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), permit, _noBorrowSig());
 
         assertEq(musd.balanceOf(merchant), 12e18, "merchant received amount");
         assertEq(musd.balanceOf(payer), 88e18, "payer debited amount");
@@ -101,11 +101,11 @@ contract MezherPayTest is Test {
 
     function test_pay_emitsPaid() public {
         uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, deadline);
         vm.expectEmit(true, true, true, true);
         emit MezherPay.Paid(orderId, payer, merchant, 12e18, 12e18, 0);
-        mezherPay.pay(
-            _payment(payer, merchant, 12e18, 12e18), _permitSig(payerPk, payer, 12e18, deadline), _noBorrowSig()
-        );
+        vm.prank(payer);
+        mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), permit, _noBorrowSig());
     }
 
     function testRevert_zeroMerchant() public {
@@ -140,6 +140,7 @@ contract MezherPayTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(IERC20Errors.ERC20InsufficientAllowance.selector, address(mezherPay), 0, 12e18)
         );
+        vm.prank(payer);
         mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), badPermit, _noBorrowSig());
 
         assertEq(musd.balanceOf(merchant), 0, "merchant unchanged");
@@ -150,9 +151,24 @@ contract MezherPayTest is Test {
         MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, deadline);
 
         musd.permit(payer, address(mezherPay), 12e18, deadline, permit.v, permit.r, permit.s);
+        vm.prank(payer);
         mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), permit, _noBorrowSig());
 
         assertEq(musd.balanceOf(merchant), 12e18, "merchant received amount");
+    }
+
+    /// @dev The permit does not bind a merchant: a third party who sees the payer's signatures
+    ///      (mempool) must not be able to send the balance part to itself.
+    function testRevert_thirdPartyRedirectsBalancePart() public {
+        address attacker = makeAddr("attacker");
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 5e18, deadline);
+
+        vm.prank(attacker);
+        vm.expectRevert(MezherPay.BalanceOnlyNeedsPayer.selector);
+        mezherPay.pay(_payment(payer, attacker, 5e18, 5e18), permit, _noBorrowSig());
+
+        assertEq(musd.balanceOf(attacker), 0, "attacker got nothing");
     }
 
     function testFuzz_pay_fromBalanceOnly(uint96 amount) public {
@@ -161,9 +177,9 @@ contract MezherPayTest is Test {
         uint256 merchantBefore = musd.balanceOf(merchant);
         uint256 payerBefore = musd.balanceOf(payer);
 
-        mezherPay.pay(
-            _payment(payer, merchant, bounded, bounded), _permitSig(payerPk, payer, bounded, deadline), _noBorrowSig()
-        );
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, bounded, deadline);
+        vm.prank(payer);
+        mezherPay.pay(_payment(payer, merchant, bounded, bounded), permit, _noBorrowSig());
 
         assertEq(musd.balanceOf(merchant) - merchantBefore, bounded, "merchant delta");
         assertEq(payerBefore - musd.balanceOf(payer), bounded, "payer delta");
@@ -254,6 +270,7 @@ contract MezherPayTest is Test {
         MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, deadline);
         troveManager.setIcr(1e18);
 
+        vm.prank(payer);
         mezherPay.pay(_payment(payer, merchant, 12e18, 12e18), permit, _noBorrowSig());
 
         assertEq(musd.balanceOf(merchant), 12e18, "no borrow means no ICR guard");

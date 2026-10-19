@@ -72,6 +72,8 @@ contract MezherPay {
     error ZeroAmount();
     /// @notice `fromBalance` was larger than `amount`.
     error FromBalanceExceedsAmount();
+    /// @notice A payment without a borrow was not sent by the payer.
+    error BalanceOnlyNeedsPayer();
     /// @notice The payer's Trove would end below `MIN_ICR_AFTER`.
     /// @param icr The ICR after borrowing, 1e18 = 100%.
     error IcrBelowFloor(uint256 icr);
@@ -103,6 +105,11 @@ contract MezherPay {
         if (p.amount == 0) revert ZeroAmount();
         if (p.fromBalance > p.amount) revert FromBalanceExceedsAmount();
 
+        uint256 borrowed = p.amount - p.fromBalance;
+        // The permit does not name a merchant; only Mezo's borrow signature does. Without a borrow,
+        // anyone holding the permit could pick the merchant, so the payer must send it.
+        if (borrowed == 0 && msg.sender != p.payer) revert BalanceOnlyNeedsPayer();
+
         if (p.fromBalance > 0) {
             // A permit already submitted by someone else must not make the payment fail.
             try IERC20Permit(address(musd))
@@ -110,8 +117,6 @@ contract MezherPay {
                 catch {}
             musd.safeTransferFrom(p.payer, p.merchant, p.fromBalance);
         }
-
-        uint256 borrowed = p.amount - p.fromBalance;
 
         if (borrowed > 0) {
             bos.withdrawMUSDWithSignature(

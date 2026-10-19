@@ -237,6 +237,11 @@ function CheckoutFor({ link }: { link: PayLink }) {
         permit,
         borrow,
       };
+      // MezherPay accepts a payment without a borrow only from the payer (BalanceOnlyNeedsPayer).
+      if (q.borrowWei === 0n) {
+        await confirm(await submitOwnGas(signed));
+        return;
+      }
       const res = await fetch("/api/relay", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -258,17 +263,21 @@ function CheckoutFor({ link }: { link: PayLink }) {
     }
   }
 
+  function submitOwnGas(s: Signed): Promise<Hex> {
+    return writeContractAsync({
+      chainId: MEZO_TESTNET.id,
+      address: mezherPay!,
+      abi: mezherPayAbi,
+      functionName: "pay",
+      args: [s.payment, s.permit, s.borrow],
+    });
+  }
+
   async function payWithOwnGas() {
     if (!fallback || !mezherPay) return;
     dispatch({ type: "RESET" });
     try {
-      const hash = await writeContractAsync({
-        chainId: MEZO_TESTNET.id,
-        address: mezherPay,
-        abi: mezherPayAbi,
-        functionName: "pay",
-        args: [fallback.payment, fallback.permit, fallback.borrow],
-      });
+      const hash = await submitOwnGas(fallback);
       setFallback(null);
       await confirm(hash);
     } catch (err) {
@@ -396,7 +405,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
                 sub={q.borrowWei > 0n ? "fee 0.1% · " + formatMusd(q.feeWei, 4) + " MUSD" : undefined}
               />
               <ReceiptLine label="Merchant receives" value={formatMusd(link.amountWei) + " MUSD"} />
-              <ReceiptLine label="Gas you pay" value="0" />
+              <ReceiptLine label="Gas you pay" value={q.borrowWei > 0n ? "0" : "Network fee, under 0.000001 BTC"} />
               <PrimaryButton loading={busy} loadingLabel={loadingLabel} onClick={pay}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
