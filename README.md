@@ -8,6 +8,7 @@
 </p>
 
 <p align="center">
+  <a href="https://mezher.vercel.app"><b>Live app</b></a> ·
   <a href="https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract">Contract (verified)</a> ·
   <a href="https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5">Live payment on testnet</a> ·
   <a href="#getting-started">Run it</a> ·
@@ -127,7 +128,7 @@ cp .env.example .env.local
 pnpm dev
 ```
 
-Then open http://localhost:3000. Fill `.env.local` with:
+Then open http://localhost:3000 (or use the live app at https://mezher.vercel.app). Fill `.env.local` with:
 
 | Variable | Value |
 | --- | --- |
