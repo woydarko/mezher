@@ -424,10 +424,9 @@
   outline: none;
 }
 
-.inputWrap:focus-within {
-  outline: 3px dashed var(--color-blue-ink);
-  outline-offset: 5px;
-  border-radius: 10px;
+/* focus shows as the yellow wash plus a heavier crayon line (no dashed outline around inputs) */
+.inputWrap:focus-within::before {
+  border-width: 4.5px;
 }
 
 .helper {
