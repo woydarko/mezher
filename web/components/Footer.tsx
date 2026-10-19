@@ -19,6 +19,7 @@ export function Footer() {
           <span className={styles.footerHeading}>Use it</span>
           <Link href="/pay">Pay</Link>
           <Link href="/merchant">Get paid</Link>
+          <Link href="/dashboard">Dashboard</Link>
         </nav>
 
         <nav className={styles.footerLinks} aria-label="On-chain">

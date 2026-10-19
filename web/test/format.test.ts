@@ -8,6 +8,10 @@ describe("formatMusd", () => {
     expect(formatMusd(0n)).toBe("0.00");
   });
 
+  it("shows whole numbers without a trailing dot when asked for 0 decimals", () => {
+    expect(formatMusd(44_526_900_000_000_000_000_000n, 0)).toBe("44,526");
+  });
+
   it("shows up to 4 decimals for fees", () => {
     expect(formatMusd(7n * 10n ** 15n, 4)).toBe("0.0070");
   });

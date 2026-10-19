@@ -96,8 +96,18 @@
   .navLink {
     padding: 4px 8px;
   }
+  /* phones: logo + wallet on top, the three links on their own row so nothing is pushed off-screen */
   .navRow {
-    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-1) var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+  .nav {
+    order: 3;
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
   }
   .logo svg {
     width: 30px;

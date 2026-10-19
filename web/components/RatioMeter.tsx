@@ -17,18 +17,30 @@ export function RatioMeter({ nowE18, afterE18 }: { nowE18: bigint; afterE18: big
   const after = band(afterE18);
   return (
     <div className={styles.wrap}>
-      <p className={styles.readout}>
-        <span>
-          Ratio now <strong className="mono">{formatRatio(nowE18)}</strong>
-        </span>
-        <span aria-hidden>→</span>
-        <span>
-          after{" "}
-          <strong className="mono" style={{ color: after.ink }}>
-            {formatRatio(afterE18)}
-          </strong>
-        </span>
-      </p>
+      {/* with no payment in view (dashboard) now and after are the same, so show one number */}
+      {nowE18 === afterE18 ? (
+        <p className={styles.readout}>
+          <span>
+            Ratio{" "}
+            <strong className="mono" style={{ color: after.ink }}>
+              {formatRatio(nowE18)}
+            </strong>
+          </span>
+        </p>
+      ) : (
+        <p className={styles.readout}>
+          <span>
+            Ratio now <strong className="mono">{formatRatio(nowE18)}</strong>
+          </span>
+          <span aria-hidden>→</span>
+          <span>
+            after{" "}
+            <strong className="mono" style={{ color: after.ink }}>
+              {formatRatio(afterE18)}
+            </strong>
+          </span>
+        </p>
+      )}
       <div
         className={styles.track}
         role="meter"

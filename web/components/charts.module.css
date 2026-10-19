@@ -1,0 +1,162 @@
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.chart svg {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.ink {
+  fill: none;
+  stroke: var(--color-ink);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.bar {
+  stroke: var(--color-ink);
+  stroke-width: 3;
+}
+
+.tick {
+  font-size: 24px;
+  font-weight: 700;
+  fill: var(--color-muted);
+}
+
+.empty {
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+/* ---------- split bar ---------- */
+
+.split {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.splitTrack {
+  position: relative;
+  display: flex;
+  height: 30px;
+  padding: 4px;
+  isolation: isolate;
+}
+
+.splitTrack::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: 14px 6px 16px 5px / 6px 14px 5px 16px;
+  filter: url(#sketch);
+  pointer-events: none;
+}
+
+.splitBalance,
+.splitBorrowed {
+  height: 100%;
+  filter: url(#sketch);
+}
+
+.splitBalance {
+  background: repeating-linear-gradient(-58deg, var(--color-paper) 0 8px, var(--color-paper-2) 8px 11px);
+  border-radius: 8px 0 0 8px;
+}
+
+.splitBorrowed {
+  background: repeating-linear-gradient(
+    -58deg,
+    var(--color-yellow) 0 8px,
+    color-mix(in srgb, var(--color-yellow) 55%, var(--color-paper)) 8px 11px
+  );
+  border-radius: 0 8px 8px 0;
+}
+
+.splitLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  font-size: 16px;
+}
+
+.splitLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.keyBalance,
+.keyBorrowed {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-ink);
+  border-radius: 4px 6px 3px 5px;
+}
+
+.keyBalance {
+  background: var(--color-paper-2);
+}
+
+.keyBorrowed {
+  background: var(--color-yellow);
+}
+
+/* ---------- stat tiles ---------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+.tile {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-4);
+}
+
+.tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-paper);
+  border: 2.5px solid var(--color-ink);
+  border-radius: var(--radius-sketch-2);
+  filter: url(#sketch);
+}
+
+.tileLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-muted);
+}
+
+.tileValue {
+  font-size: 21px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.tileUnit {
+  font-size: 14px;
+  color: var(--color-muted);
+}
+
+.tileSub {
+  font-size: 14px;
+  color: var(--color-muted);
+}

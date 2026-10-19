@@ -6,14 +6,16 @@ import styles from "./ui.module.css";
 
 const short = (a: string) => a.slice(0, 6) + "…" + a.slice(-4);
 
-export function PaymentsTable({ logs }: { logs: PaidLog[] }) {
+/** `show` picks the other party: a merchant wants to see payers, a payer wants to see merchants. */
+export function PaymentsTable({ logs, show = "payer" }: { logs: PaidLog[]; show?: "payer" | "merchant" }) {
+  const party = show === "payer" ? "Payer" : "Merchant";
   return (
     <table className={styles.table}>
       <thead>
         <tr>
           <th scope="col">Amount</th>
           <th scope="col">Order</th>
-          <th scope="col">Payer</th>
+          <th scope="col">{party}</th>
           <th scope="col">Split</th>
           <th scope="col">
             <span className={styles.srOnly}>Transaction</span>
@@ -31,8 +33,8 @@ export function PaymentsTable({ logs }: { logs: PaidLog[] }) {
               {/* links carry ≥ 16 hex chars, so keep 16 after stripping the bytes32 padding */}
               {l.orderId.slice(2).replace(/^0+/, "").padStart(16, "0").slice(0, 8)}
             </td>
-            <td className="mono" data-label="Payer">
-              {short(l.payer)}
+            <td className="mono" data-label={party}>
+              {short(show === "payer" ? l.payer : l.merchant)}
             </td>
             <td className="mono" data-label="Split">
               {formatMusd(l.fromBalanceWei)} bal / {formatMusd(l.borrowedWei)} borrow

@@ -4,7 +4,7 @@ import { formatUnits } from "viem";
 export function formatMusd(wei: bigint, decimals = 2): string {
   const [whole, frac = ""] = formatUnits(wei, 18).split(".");
   const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return grouped + "." + frac.padEnd(decimals, "0").slice(0, decimals);
+  return decimals === 0 ? grouped : grouped + "." + frac.padEnd(decimals, "0").slice(0, decimals);
 }
 
 /** 1e18 = 100%; one decimal, rounded down. */

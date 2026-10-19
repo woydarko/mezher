@@ -23,6 +23,7 @@ export function Header() {
         <nav className={styles.nav} aria-label="Main">
           {link("/pay", "Pay")}
           {link("/merchant", "Get paid")}
+          {link("/dashboard", "Dashboard")}
         </nav>
         <WalletButton />
       </div>

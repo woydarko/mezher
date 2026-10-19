@@ -1,0 +1,92 @@
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* tabs drawn like two crayon tags; the selected one gets the yellow highlighter */
+.tab {
+  position: relative;
+  isolation: isolate;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4);
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 800;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.tab::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-paper);
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: var(--radius-sketch);
+  filter: url(#sketch);
+  transition: background var(--dur-base) var(--ease);
+}
+
+.tab[aria-selected="true"]::before {
+  background: color-mix(in srgb, var(--color-yellow) 70%, var(--color-paper));
+}
+
+.tab:hover::before {
+  background: var(--color-paper-2);
+}
+
+.tab[aria-selected="true"]:hover::before {
+  background: color-mix(in srgb, var(--color-yellow) 70%, var(--color-paper));
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.actions > a {
+  width: auto;
+}
+
+.note {
+  color: var(--color-muted);
+}
+
+/* public stats: a quieter band below the personal view */
+.public {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-12);
+}
+
+.public::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -1%;
+  right: -1%;
+  height: 5px;
+  background: var(--color-muted);
+  border-radius: 3px 7px 2px 6px / 4px 2px 5px 3px;
+  filter: url(#sketch);
+  opacity: 0.75;
+  transform: rotate(-0.3deg);
+}
