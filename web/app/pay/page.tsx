@@ -173,7 +173,10 @@ function CheckoutFor({ link }: { link: PayLink }) {
   const confirm = useCallback(
     async (hash: Hex) => {
       dispatch({ type: "SENT", hash });
-      const receipt = await publicClient!.waitForTransactionReceipt({ hash });
+      const receipt = await publicClient!
+        .waitForTransactionReceipt({ hash, timeout: 60_000 })
+        // shortcut: Mezo RPC sometimes stalls this poll; one direct read after the timeout, then the error shows
+        .catch(() => publicClient!.getTransactionReceipt({ hash }));
       if (receipt.status === "success") {
         dispatch({ type: "CONFIRMED" });
         refetch();

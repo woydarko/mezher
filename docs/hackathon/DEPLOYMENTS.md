@@ -42,7 +42,8 @@ Our contracts:
 ## Demo state
 - Pre-funded wallets: TBD — record test BTC / MUSD balances and the demo payer's Trove (collateral, debt, ICR) within the last hour before recording and submitting.
 - Seed data already on-chain: TBD — demo payer Trove open with debt ≥ 2,000 MUSD and ICR ≥ 200%; wallet balance reduced to ~5 MUSD; 1–2 earlier `Paid` events for the demo merchant.
-- Reference transactions for the demo script (2026-10-19, local `pnpm dev`, on the superseded 0xDF0d… contract; rerun on 0x80dd… pending):
+- Reference transaction on the current contract 0x80dd…: relayed (gasless) 11 MUSD, fully borrowed, payer 0xe816… → merchant 0x0491…, sent by the relayer: [0xdb3bc15e…](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5) (block 16241333, 2026-10-19).
+- Earlier runs (2026-10-19, local `pnpm dev`, on the superseded 0xDF0d… contract):
   1. Relayed (gasless) 4 MUSD = 3 balance + 1 borrowed to merchant 0x0491…11aa, sent by the relayer: [0xeed3ffba…](https://explorer.test.mezo.org/tx/0xeed3ffba37020727cfe98642dc6166fb2e513f3c923bf429693ae5d9eee03652) (block 16240895).
   2. 12 MUSD = 5 balance + 7 borrowed to the same merchant, own-gas fallback after a relay 503 (cause not logged then; logging added since): [0x2e55c35d…](https://explorer.test.mezo.org/tx/0x2e55c35db52a70c7d6d6787e76aadb20715824ef535ec4cda1b44bdca19799d9) (block 16240757).
   3. Relayed 3 MUSD, merchant = the payer itself (link built while connected as payer; relay check only): [0x416eba14…](https://explorer.test.mezo.org/tx/0x416eba1474ed4298445277d2308e93dd3892a646c0b7f73bac124028b20777f3).
