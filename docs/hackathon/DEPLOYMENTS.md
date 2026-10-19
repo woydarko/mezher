@@ -27,7 +27,8 @@ Mezo contracts we integrate with (deployed by Mezo, from `mezo-org/musd` `solidi
 Our contracts:
 | Name | Address / program ID | Deploy tx | Verified on explorer | Source path |
 | --- | --- | --- | --- | --- |
-| MezherPay | [0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2) (deploy block 16228993, 2026-10-18) | [0xa5621587…e5f4](https://explorer.test.mezo.org/tx/0xa562158792e47ecfa5095b501c1c9f5287f5bddce6a313db00f184d5934ee5f4) | Yes, Blockscout 2026-10-18 ([source](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2?tab=contract)) | contracts/src/MezherPay.sol (solc 0.8.28, london, optimizer 200) |
+| MezherPay (current) | [0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b](https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b) (deploy block 16241205, 2026-10-19; adds `BalanceOnlyNeedsPayer`) | [0xaa6cb122…70fe](https://explorer.test.mezo.org/tx/0xaa6cb12269f149f828c9667ab39f885f52a9125ae61390b919b88053d14070fe) | Yes, Blockscout 2026-10-19 ([source](https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract)) | contracts/src/MezherPay.sol (solc 0.8.28, london, optimizer 200) |
+| MezherPay (superseded 2026-10-19, balance-part redirect bug; do not use) | [0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2) (deploy block 16228993, 2026-10-18) | [0xa5621587…e5f4](https://explorer.test.mezo.org/tx/0xa562158792e47ecfa5095b501c1c9f5287f5bddce6a313db00f184d5934ee5f4) | Yes, Blockscout 2026-10-18 ([source](https://explorer.test.mezo.org/address/0xDF0ddaF1dA4e81f6E55284Ed8EBf58469EC219c2?tab=contract)) | contracts/src/MezherPay.sol (solc 0.8.28, london, optimizer 200) |
 
 ## Roles and keys (names only)
 | Role | Address | Key storage |
@@ -41,7 +42,7 @@ Our contracts:
 ## Demo state
 - Pre-funded wallets: TBD — record test BTC / MUSD balances and the demo payer's Trove (collateral, debt, ICR) within the last hour before recording and submitting.
 - Seed data already on-chain: TBD — demo payer Trove open with debt ≥ 2,000 MUSD and ICR ≥ 200%; wallet balance reduced to ~5 MUSD; 1–2 earlier `Paid` events for the demo merchant.
-- Reference transactions for the demo script (2026-10-19, local `pnpm dev`):
+- Reference transactions for the demo script (2026-10-19, local `pnpm dev`, on the superseded 0xDF0d… contract; rerun on 0x80dd… pending):
   1. Relayed (gasless) 4 MUSD = 3 balance + 1 borrowed to merchant 0x0491…11aa, sent by the relayer: [0xeed3ffba…](https://explorer.test.mezo.org/tx/0xeed3ffba37020727cfe98642dc6166fb2e513f3c923bf429693ae5d9eee03652) (block 16240895).
   2. 12 MUSD = 5 balance + 7 borrowed to the same merchant, own-gas fallback after a relay 503 (cause not logged then; logging added since): [0x2e55c35d…](https://explorer.test.mezo.org/tx/0x2e55c35db52a70c7d6d6787e76aadb20715824ef535ec4cda1b44bdca19799d9) (block 16240757).
   3. Relayed 3 MUSD, merchant = the payer itself (link built while connected as payer; relay check only): [0x416eba14…](https://explorer.test.mezo.org/tx/0x416eba1474ed4298445277d2308e93dd3892a646c0b7f73bac124028b20777f3).
