@@ -37,3 +37,6 @@ next-env.d.ts
 
 # vitest / rtk reports
 /.vitest
+
+# vercel cli link (env files are already covered by .env*.local above)
+.vercel
