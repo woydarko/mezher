@@ -177,7 +177,9 @@ a {
 
 .page-landing {
   max-width: 1080px;
-  gap: var(--space-16);
+  /* landing sections breathe: ~100px on phones, up to 160px on wide screens */
+  gap: clamp(96px, 12vw, 160px);
+  padding-bottom: clamp(96px, 12vw, 160px);
 }
 
 @media (min-width: 768px) {

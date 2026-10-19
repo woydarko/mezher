@@ -54,9 +54,14 @@
   max-width: 440px;
 }
 
+.ctas > * {
+  white-space: nowrap;
+}
+
 @media (min-width: 560px) {
   .ctas {
-    grid-template-columns: 1.3fr 1fr;
+    grid-template-columns: auto auto;
+    justify-content: start;
   }
 }
 

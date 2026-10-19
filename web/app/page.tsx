@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { DemoMockup } from "@/components/DemoMockup";
 import { Doodle } from "@/components/Doodle";
 import { Illustration } from "@/components/Illustration";
 import { Reveal } from "@/components/Reveal";
@@ -131,6 +132,16 @@ export default function Home() {
               Your BTC never leaves your Trove.
             </figcaption>
           </figure>
+        </Reveal>
+      </section>
+
+      <section className={l.section} aria-labelledby="watch">
+        <Reveal as="h2" id="watch" className={l.sectionTitle}>
+          Watch a coffee get paid
+          <Doodle name="underline" className={l.underline} />
+        </Reveal>
+        <Reveal>
+          <DemoMockup />
         </Reveal>
       </section>
 
