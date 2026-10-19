@@ -9,6 +9,7 @@
 
 <p align="center">
   <a href="https://mezher.vercel.app"><b>Live app</b></a> ·
+  <a href="https://drive.google.com/file/d/1n_nNus2p2HWk6ShxbhdL81uJr6z7KvDw/view?usp=sharing">Pitch deck</a> ·
   <a href="https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract">Contract (verified)</a> ·
   <a href="https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0">Live payment on testnet</a> ·
   <a href="#getting-started">Run it</a> ·
