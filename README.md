@@ -52,6 +52,7 @@ Mezher turns it into one checkout:
 3. **The payer signs**: an MUSD permit for the balance part and Mezo's `WithdrawMUSD` message for the borrowed part, with the merchant as recipient.
 4. **The relayer calls `MezherPay.pay()`**, which moves the balance part, borrows the rest from the payer's Trove directly to the merchant, checks the ratio, and emits `Paid`.
 5. **The merchant sees the payment** on `/merchant` within a few seconds, and the link now shows "Already paid".
+6. **Both sides track it on `/dashboard`**: merchants see what they received per day and how much was borrowed against their customers' BTC; payers see their Trove health, liquidation price and room left before the 150% line.
 
 No Trove yet? The checkout can open one: lock BTC, borrow at least 1,800 MUSD into your wallet, then pay.
 
@@ -143,7 +144,7 @@ To pay, use a wallet on Mezo testnet: get test BTC from the [faucet](https://fau
 | --- | --- | --- |
 | Contract unit (17) | `cd contracts && forge test --match-contract MezherPayTest` | Split, permit front-run, signature checks, ICR floor, redirect attempts |
 | Contract fork (4) | `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol` | The real Mezo contracts on a testnet fork: 5 + 7 split, replay, ICR floor, redirect |
-| Web unit (76) | `cd web && pnpm vitest run` | Link parsing, quote and ratio, Trove opening, signatures, hints, relay, checkout state, payment logs, QR |
+| Web unit (87) | `cd web && pnpm vitest run` | Link parsing, quote and ratio, Trove opening, signatures, hints, relay, checkout state, payment logs, dashboard stats, QR |
 | Build | `cd web && pnpm build` | Type check and production build |
 
 Mezo's price oracle is a native precompile that Foundry's EVM does not have, so the fork tests pin `PriceFeed.fetchPrice()` to the live price. Every other contract in those tests is the real one.
@@ -156,7 +157,7 @@ contracts/
   test/                    unit tests (mocks) and fork tests (real Mezo testnet)
   script/Deploy.s.sol      deployment script
 web/
-  app/                     Next.js pages: / landing, /pay checkout, /merchant, /terms, /api/relay
+  app/                     Next.js pages: / landing, /pay checkout, /merchant, /dashboard, /terms, /api/relay
   components/              crayon UI components
   lib/                     link, quote, Trove, signatures, hints, relay, payment logs (all unit tested)
 docs/assets/               README illustrations
@@ -166,7 +167,7 @@ docs/assets/               README illustrations
 
 ## Status and roadmap
 
-**Now (Wave 1):** working on Mezo testnet, end to end: payment links with QR, gasless borrow-to-pay checkout, in-app Trove opening, merchant payment history.
+**Now (Wave 1):** working on Mezo testnet, end to end: payment links with QR, gasless borrow-to-pay checkout, in-app Trove opening, and a dashboard for merchants and payers built from on-chain data.
 
 **Known limits**
 - Testnet only. MezherPay has had an AI-assisted security review, not a professional audit.
