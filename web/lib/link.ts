@@ -1,4 +1,4 @@
-import { getAddress, isAddress, pad, parseUnits, type Address, type Hex } from "viem";
+import { getAddress, isAddress, maxUint256, pad, parseUnits, type Address, type Hex } from "viem";
 
 export type PayLink = { to: Address; amountWei: bigint; orderId: Hex; orderRaw: string; label?: string };
 

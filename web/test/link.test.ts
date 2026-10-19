@@ -42,6 +42,10 @@ describe("buildLink + parseLink", () => {
     }
   });
 
+  it("rejects amounts that do not fit uint256", () => {
+    expect(parseLink(params({ amount: "1" + "0".repeat(60) }))).toEqual({ ok: false, error: "incomplete" });
+  });
+
   it("accepts 18 decimals exactly", () => {
     const parsed = parseLink(params({ amount: "0.000000000000000001" }));
     expect(parsed.ok && parsed.link.amountWei).toBe(1n);
