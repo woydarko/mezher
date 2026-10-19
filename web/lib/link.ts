@@ -12,7 +12,7 @@ const MAX_LABEL = 60;
 function amountWei(amount: string): bigint | null {
   if (!AMOUNT_RE.test(amount)) return null;
   const wei = parseUnits(amount, 18);
-  return wei > 0n ? wei : null;
+  return wei > 0n && wei <= maxUint256 ? wei : null;
 }
 
 function validate(input: LinkInput): { field: LinkField; message: string } | null {
