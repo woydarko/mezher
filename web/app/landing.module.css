@@ -1,0 +1,320 @@
+.hero {
+  display: grid;
+  gap: var(--space-12);
+  align-items: center;
+  padding-top: var(--space-8);
+}
+
+@media (min-width: 900px) {
+  .hero {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.kicker {
+  align-self: flex-start;
+  padding: 2px 12px;
+  border: 2px solid var(--color-ink);
+  border-radius: var(--radius-sketch);
+  background: var(--color-yellow);
+  font-weight: 800;
+  font-size: 15px;
+  transform: rotate(-2deg);
+}
+
+.circled {
+  position: relative;
+  display: inline-block;
+  color: var(--color-orange-ink);
+}
+
+.circle {
+  position: absolute;
+  left: -16%;
+  top: -18%;
+  width: 132%;
+  height: 136%;
+  pointer-events: none;
+}
+
+.lead {
+  font-size: 20px;
+  line-height: 1.5;
+}
+
+.ctas {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 440px;
+}
+
+@media (min-width: 560px) {
+  .ctas {
+    grid-template-columns: 1.3fr 1fr;
+  }
+}
+
+/* The split drawn like a sum on paper. */
+.sketch {
+  position: relative;
+  margin: 0;
+  padding: var(--space-8) var(--space-6);
+  display: grid;
+  gap: var(--space-3);
+  justify-items: center;
+  isolation: isolate;
+  transform: rotate(1.2deg);
+}
+
+.sketch::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-paper-2);
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: var(--radius-sketch-2);
+  box-shadow: 6px 7px 0 var(--color-ink);
+  filter: url(#sketch);
+}
+
+.part {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  isolation: isolate;
+}
+
+.part::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--color-paper);
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: var(--radius-sketch);
+  filter: url(#sketch);
+}
+
+.partBorrow::before {
+  background: repeating-linear-gradient(
+    -58deg,
+    var(--color-paper) 0 9px,
+    color-mix(in srgb, var(--color-orange) 25%, var(--color-paper)) 9px 12px
+  );
+}
+
+.partTotal::before {
+  background: repeating-linear-gradient(-58deg, var(--color-orange) 0 9px, var(--color-orange-soft) 9px 12px);
+}
+
+.amount {
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.op {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.arrow {
+  width: 64px;
+  height: 40px;
+  transform: rotate(90deg);
+}
+
+.partCoin {
+  position: absolute;
+  left: -22px;
+  top: -18px;
+  width: 46px;
+  height: 46px;
+  transform: rotate(-12deg);
+}
+
+.partStar {
+  position: absolute;
+  right: -20px;
+  top: -22px;
+  width: 44px;
+  height: 44px;
+  transform: rotate(14deg);
+  animation: pop 2.4s var(--ease-bounce) infinite;
+}
+
+@keyframes pop {
+  0%,
+  80%,
+  100% {
+    transform: rotate(14deg) scale(1);
+  }
+  88% {
+    transform: rotate(-6deg) scale(1.2);
+  }
+}
+
+.caption {
+  margin-top: var(--space-2);
+  font-weight: 800;
+  font-size: 17px;
+  color: var(--color-green-ink);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.sectionTitle {
+  position: relative;
+  align-self: flex-start;
+  padding-bottom: 10px;
+}
+
+.underline {
+  position: absolute;
+  left: -4px;
+  bottom: -6px;
+  width: calc(100% + 12px);
+  height: 16px;
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+@media (min-width: 820px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.stepNo {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  font-size: 30px;
+  font-weight: 800;
+  background: var(--color-yellow);
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%;
+  transform: rotate(-6deg);
+}
+
+.safety {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-6);
+}
+
+@media (min-width: 820px) {
+  .safety {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.safety li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.check {
+  flex: none;
+  width: 40px;
+  height: 40px;
+}
+
+.safety h3 {
+  margin-bottom: var(--space-1);
+}
+
+.faq {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 760px;
+}
+
+.qa {
+  position: relative;
+  isolation: isolate;
+  padding: var(--space-3) var(--space-4);
+}
+
+.qa::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: var(--radius-sketch-2);
+  background: var(--color-paper);
+  filter: url(#sketch);
+}
+
+.qa[open]::before {
+  background: color-mix(in srgb, var(--color-yellow) 22%, var(--color-paper));
+}
+
+.qa summary {
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 19px;
+  list-style: none;
+}
+
+.qa summary::-webkit-details-marker {
+  display: none;
+}
+
+.qa summary::before {
+  content: "+";
+  display: inline-block;
+  width: 1.2em;
+  font-weight: 800;
+  color: var(--color-orange-ink);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.qa[open] summary::before {
+  transform: rotate(45deg);
+}
+
+.qa p {
+  padding: var(--space-2) 0 var(--space-1) 1.2em;
+}
+
+.final {
+  align-items: center;
+  text-align: center;
+  padding: var(--space-12) var(--space-6);
+}
+
+.final p {
+  margin: 0 auto;
+}
+
+.finalCta {
+  max-width: 360px;
+}

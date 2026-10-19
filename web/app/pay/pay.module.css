@@ -1,0 +1,60 @@
+.celebrate {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 110px;
+}
+
+.bigCheck {
+  width: 110px;
+  height: 110px;
+}
+
+.star1,
+.star2 {
+  width: 38px;
+  height: 38px;
+  opacity: 0;
+  animation: popIn 400ms var(--ease-bounce) 550ms forwards;
+}
+
+.star1 {
+  transform: rotate(-14deg);
+  margin-bottom: 52px;
+}
+
+.star2 {
+  transform: rotate(18deg);
+  margin-bottom: 64px;
+  animation-delay: 680ms;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    scale: 0.3;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .star1,
+  .star2 {
+    opacity: 1;
+  }
+}
+
+.paidAmount {
+  text-align: center;
+  margin: 0 auto;
+  font-size: 48px;
+  line-height: 1;
+}
+
+.paidAmount span {
+  font-size: 22px;
+}

@@ -1,12 +1,19 @@
 "use client";
 
 import "@rainbow-me/rainbowkit/styles.css";
-import { RainbowKitProvider, darkTheme } from "@rainbow-me/rainbowkit";
+import { RainbowKitProvider, lightTheme } from "@rainbow-me/rainbowkit";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getConfig, mezoTestnet } from "@mezo-org/passport";
 import { useState, type ReactNode } from "react";
 import { WagmiProvider } from "wagmi";
+import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
+
+// Wallet modal in the crayon palette (globals.css tokens) and the same handwriting font.
+const walletTheme = {
+  ...lightTheme({ accentColor: "#F7931A", accentColorForeground: "#1F1B16", borderRadius: "large" }),
+  fonts: { body: "var(--font-shantell), system-ui, sans-serif" },
+};
 
 const wagmiConfig = getConfig({
   appName: "Mezher",
@@ -22,9 +29,10 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider initialChain={mezoTestnet} theme={darkTheme({ accentColor: "#F7931A" })}>
+        <RainbowKitProvider initialChain={mezoTestnet} theme={walletTheme}>
           <Header />
           {children}
+          <Footer />
         </RainbowKitProvider>
       </QueryClientProvider>
     </WagmiProvider>

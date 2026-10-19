@@ -4,35 +4,72 @@
   gap: var(--space-2);
 }
 
+.readout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: 18px;
+}
+
 .track {
   position: relative;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--color-border);
-  overflow: hidden;
+  height: 26px;
+  isolation: isolate;
+}
+
+/* outline drawn in crayon */
+.track::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: 14px 6px 16px 5px / 6px 14px 5px 16px;
+  filter: url(#sketch);
+  pointer-events: none;
 }
 
 .fill {
-  height: 100%;
+  position: absolute;
+  inset: 4px auto 4px 4px;
+  max-width: calc(100% - 8px);
+  background: repeating-linear-gradient(-58deg, var(--band) 0 7px, color-mix(in srgb, var(--band) 55%, white) 7px 10px);
+  border-radius: 8px 3px 9px 3px;
+  filter: url(#sketch);
   transition: width var(--dur-base) var(--ease);
 }
 
 .marker {
   position: absolute;
-  top: 0;
-  width: 2px;
-  height: 100%;
-  background: var(--color-text);
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  margin-left: -1px;
+  z-index: 2;
+  background: var(--color-ink);
+  border-radius: 2px;
+  transform: rotate(4deg);
 }
 
 .labels {
   position: relative;
-  height: 16px;
-  font-size: 12px;
+  height: 22px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--color-muted);
 }
 
 .labels span {
   position: absolute;
+  white-space: nowrap;
   transform: translateX(-50%);
+}
+
+.labels span:first-child {
+  transform: translateX(-85%);
+}
+
+.labels span:last-child {
+  transform: translateX(-15%);
 }

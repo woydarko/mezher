@@ -21,18 +21,25 @@ export function PaymentsTable({ logs }: { logs: PaidLog[] }) {
         </tr>
       </thead>
       <tbody>
+        {/* data-label feeds the stacked mobile layout */}
         {logs.map((l) => (
           <tr key={l.txHash + l.orderId}>
-            <td className="mono">{formatMusd(l.amountWei)} MUSD</td>
-            <td className="mono">{/* links carry ≥ 16 hex chars, so keep 16 after stripping the bytes32 padding */}
-              {l.orderId.slice(2).replace(/^0+/, "").padStart(16, "0").slice(0, 8)}</td>
-            <td className="mono">{short(l.payer)}</td>
-            <td className="mono">
+            <td className="mono" data-label="Amount">
+              {formatMusd(l.amountWei)} MUSD
+            </td>
+            <td className="mono" data-label="Order">
+              {/* links carry ≥ 16 hex chars, so keep 16 after stripping the bytes32 padding */}
+              {l.orderId.slice(2).replace(/^0+/, "").padStart(16, "0").slice(0, 8)}
+            </td>
+            <td className="mono" data-label="Payer">
+              {short(l.payer)}
+            </td>
+            <td className="mono" data-label="Split">
               {formatMusd(l.fromBalanceWei)} bal / {formatMusd(l.borrowedWei)} borrow
             </td>
-            <td>
+            <td data-label="Tx">
               <a href={explorerTx(l.txHash)} target="_blank" rel="noreferrer" aria-label="View on explorer">
-                <ExternalLink size={14} aria-hidden />
+                <ExternalLink size={16} aria-hidden />
               </a>
             </td>
           </tr>

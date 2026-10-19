@@ -1,6 +1,5 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useState } from "react";
@@ -15,6 +14,8 @@ import {
   useWriteContract,
 } from "wagmi";
 import { Card } from "@/components/Card";
+import { Doodle } from "@/components/Doodle";
+import { WalletButton } from "@/components/WalletButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RatioMeter } from "@/components/RatioMeter";
 import { ReceiptLine } from "@/components/ReceiptLine";
@@ -40,6 +41,7 @@ import {
 import { fetchPaidLogs, isOrderPaid } from "@/lib/paid-logs";
 import { icrE18, quote, type TroveState } from "@/lib/quote";
 import { permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
+import p from "./pay.module.css";
 
 const SIG_TTL_S = 15n * 60n; // client signature deadline: now + 15 minutes
 const ALREADY_PAID_CHECK = true;
@@ -293,6 +295,18 @@ function CheckoutFor({ link }: { link: PayLink }) {
     return (
       <main className="page">
         <Card>
+          {state.step === "paid" && (
+            <div className={p.celebrate} aria-hidden>
+              <Doodle name="star" className={p.star1} />
+              <Doodle name="check" className={p.bigCheck} />
+              <Doodle name="star" className={p.star2} />
+            </div>
+          )}
+          {state.step === "paid" && (
+            <p className={p.paidAmount + " mono"}>
+              {formatMusd(link.amountWei)} <span>MUSD</span>
+            </p>
+          )}
           {state.step === "paid" ? (
             <StatusLine tone="success" href={state.hash && explorerTx(state.hash)}>
               Paid {formatMusd(link.amountWei)} MUSD
@@ -346,7 +360,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
       {!isConnected && (
         <Card>
           <p>Connect your wallet to see how you&apos;d pay.</p>
-          <ConnectButton />
+          <WalletButton wide />
         </Card>
       )}
 

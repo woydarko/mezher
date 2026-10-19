@@ -13,13 +13,15 @@ export function Field({ label, helper, error, ...inputProps }: Props) {
       <label htmlFor={id} className={styles.fieldLabel}>
         {label}
       </label>
-      <input
-        id={id}
-        className={styles.input}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={note ? noteId : undefined}
-        {...inputProps}
-      />
+      <span className={styles.inputWrap}>
+        <input
+          id={id}
+          className={styles.input}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={note ? noteId : undefined}
+          {...inputProps}
+        />
+      </span>
       {note && (
         <span id={noteId} className={error ? styles.helper + " " + styles.error : styles.helper}>
           {error && <AlertTriangle size={14} aria-hidden />} {note}
