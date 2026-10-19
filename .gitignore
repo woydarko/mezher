@@ -6,3 +6,9 @@ out/
 cache/
 broadcast/*/31611/run-latest.json
 .next/
+
+# Working notes, agent instructions and audit reports stay local; the repo ships the project only.
+*.md
+!README.md
+!contracts/lib/**/*.md
+anti-slop/

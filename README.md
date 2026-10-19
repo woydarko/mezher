@@ -12,7 +12,7 @@
   <a href="https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5">Live payment on testnet</a> ·
   <a href="#getting-started">Run it</a> ·
   <a href="#integrate">Integrate</a> ·
-  <a href="docs/SECURITY.md">Security</a>
+  <a href="#safety">Safety</a>
 </p>
 
 ---
@@ -74,7 +74,7 @@ Enforced on-chain by [`MezherPay.sol`](contracts/src/MezherPay.sol):
 - **Balance-only payments come from the payer.** When nothing is borrowed, the MUSD permit names no merchant, so `pay()` requires the payer to send it (`BalanceOnlyNeedsPayer`).
 - **No owner, no upgrades, no custody.** The contract holds no funds between calls.
 
-The relay endpoint validates every request, rate-limits per payer and IP, de-duplicates orders, simulates before sending, and never logs signatures. Details and known risks: [`docs/SECURITY.md`](docs/SECURITY.md).
+The relay endpoint ([`web/lib/relay.ts`](web/lib/relay.ts)) validates every request, rate-limits per payer and IP, de-duplicates orders, simulates before sending, and never logs signatures. Known risks are listed under [Status and roadmap](#status-and-roadmap).
 
 ## Deployments
 
@@ -88,7 +88,7 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 | BorrowerOperations | `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5` |
 | TroveManager | `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0` |
 
-Reference payment: [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5), 11 MUSD borrowed from the payer's Trove straight to the merchant, sent by the relayer. More in [`docs/hackathon/DEPLOYMENTS.md`](docs/hackathon/DEPLOYMENTS.md).
+Reference payment: [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5), 11 MUSD borrowed from the payer's Trove straight to the merchant, sent by the relayer.
 
 ## Integrate
 
@@ -159,7 +159,7 @@ web/
   app/                     Next.js pages: / landing, /pay checkout, /merchant, /terms, /api/relay
   components/              crayon UI components
   lib/                     link, quote, Trove, signatures, hints, relay, payment logs (all unit tested)
-docs/                      product, architecture, security, design system, testing, deployments
+docs/assets/               README illustrations
 ```
 
 **Stack:** Solidity 0.8.28 (EVM london), Foundry, OpenZeppelin 5 · Next.js 14, React 18, viem, wagmi, RainbowKit with Mezo Passport · vitest.
