@@ -24,7 +24,8 @@ export function PaymentsTable({ logs }: { logs: PaidLog[] }) {
         {logs.map((l) => (
           <tr key={l.txHash + l.orderId}>
             <td className="mono">{formatMusd(l.amountWei)} MUSD</td>
-            <td className="mono">{l.orderId.replace(/^0x0*/, "").slice(0, 8)}</td>
+            <td className="mono">{/* links carry ≥ 16 hex chars, so keep 16 after stripping the bytes32 padding */}
+              {l.orderId.slice(2).replace(/^0+/, "").padStart(16, "0").slice(0, 8)}</td>
             <td className="mono">{short(l.payer)}</td>
             <td className="mono">
               {formatMusd(l.fromBalanceWei)} bal / {formatMusd(l.borrowedWei)} borrow
