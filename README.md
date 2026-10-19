@@ -1,100 +1,186 @@
-# Mezher
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Mezher: pay with your Bitcoin, keep your Bitcoin. 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC makes 12 MUSD for the merchant." width="100%">
+</p>
 
-**Pay with your Bitcoin. Keep your Bitcoin.**
+<p align="center">
+  <b>A Bitcoin-backed checkout on Mezo.</b><br>
+  Pay a merchant in MUSD. Whatever your balance doesn't cover is borrowed against your BTC, straight to the merchant, in one transaction.
+</p>
 
-Mezher is a checkout for MUSD on [Mezo](https://mezo.org). A payer with an MUSD Trove pays a merchant in one atomic transaction: whatever their MUSD balance covers is used first, and the rest is **borrowed from their Trove straight to the merchant** with Mezo's `withdrawMUSDWithSignature`. A relayer submits the transaction, so the payer only signs and pays no gas for the borrowed part. Their BTC never leaves the Trove.
+<p align="center">
+  <a href="https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract">Contract (verified)</a> ·
+  <a href="https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5">Live payment on testnet</a> ·
+  <a href="#getting-started">Run it</a> ·
+  <a href="#integrate">Integrate</a> ·
+  <a href="docs/SECURITY.md">Security</a>
+</p>
 
-Built for the Mezo Buildathon (Wave 1). Network: **Mezo testnet**.
+---
 
-| | |
+## Contents
+
+- [Why Mezher](#why-mezher)
+- [How it works](#how-it-works)
+- [What it uses from Mezo](#what-it-uses-from-mezo)
+- [Safety](#safety)
+- [Deployments](#deployments)
+- [Integrate](#integrate)
+- [Getting started](#getting-started)
+- [Testing](#testing)
+- [Project structure](#project-structure)
+- [Status and roadmap](#status-and-roadmap)
+
+## Why Mezher
+
+People who hold Bitcoin on Mezo can borrow MUSD against it, but spending that credit at a shop still takes several steps: borrow to your wallet, wait, then send a payment, and pay gas each time. The easy path is to sell BTC instead, which is exactly what a Bitcoin holder wants to avoid.
+
+Mezher turns it into one checkout:
+
+- **Keep your Bitcoin.** Your BTC stays locked in your Trove; only the missing MUSD is borrowed.
+- **One transaction.** Your balance part and the borrowed part reach the merchant together, or nothing moves.
+- **No gas for the borrowed part.** You sign; a relayer sends the transaction.
+- **Safe by default.** The contract refuses any payment that would leave your Trove under a 150% collateral ratio.
+
+## How it works
+
+<p align="center">
+  <img src="docs/assets/flow.svg" alt="Flow: 1 merchant makes a link, 2 payer signs a permit for 5 MUSD and a borrow of 7 MUSD to the merchant, 3 relayer sends MezherPay.pay, 4 MUSD moves 5 from the payer's balance to the merchant, 5 Mezo borrows 7 from the Trove straight to the merchant, 6 the Trove ratio must stay at least 150% or everything reverts, 7 the merchant has 12 MUSD and the payer keeps the BTC." width="100%">
+</p>
+
+1. **The merchant creates a link** on `/merchant`, with an amount and an order id (and a QR code for a counter).
+2. **The payer opens it** on `/pay` and sees the exact split: what comes from their MUSD balance, what gets borrowed, Mezo's 0.1% fee, and their collateral ratio before and after.
+3. **The payer signs**: an MUSD permit for the balance part and Mezo's `WithdrawMUSD` message for the borrowed part, with the merchant as recipient.
+4. **The relayer calls `MezherPay.pay()`**, which moves the balance part, borrows the rest from the payer's Trove directly to the merchant, checks the ratio, and emits `Paid`.
+5. **The merchant sees the payment** on `/merchant` within a few seconds, and the link now shows "Already paid".
+
+No Trove yet? The checkout can open one: lock BTC, borrow at least 1,800 MUSD into your wallet, then pay.
+
+## What it uses from Mezo
+
+| Mezo component | Used for |
 | --- | --- |
-| Live app | Coming soon (deploy pending) |
-| MezherPay contract | [`0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b`](https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract) (verified source, deploy block 16241205) |
-| Proof, relayed gasless payment | [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5): 11 MUSD fully borrowed from the payer's Trove to the merchant, sent by the relayer |
-| Chain | Mezo testnet, chain id 31611, RPC `https://rpc.test.mezo.org`, explorer `https://explorer.test.mezo.org` |
+| `MUSD` (ERC20Permit, domain "Mezo USD" v1) | Moving the balance part with a signed permit |
+| `BorrowerOperationsSignatures.withdrawMUSDWithSignature` | Borrowing on the payer's behalf with the **merchant as recipient** (EIP-712 `WithdrawMUSD`, nonce + deadline) |
+| `BorrowerOperations.openTrove` | Opening a Trove from the checkout |
+| `HintHelpers`, `SortedTroves` | Hints for re-sorting the Trove after the borrow, so Mezo does not search the whole list |
+| `TroveManager`, `PriceFeed` | Reading the Trove and enforcing the 150% floor after the borrow |
 
-## How a payment works
+## Safety
 
-```
-merchant  ──  /merchant: amount + order id  ──►  link  /pay?to=0x…&amount=12&order=…
-payer     ──  opens link, sees: 5 MUSD from balance + 7 MUSD borrowed (fee 0.1%), ratio now → after
-payer     ──  signs  (1) MUSD permit for the balance part   (2) Mezo WithdrawMUSD for the borrowed part
-relayer   ──  MezherPay.pay(payment, permit, borrow)
-MezherPay ──  permit + transferFrom(payer → merchant, 5)
-          ──  BorrowerOperationsSignatures.withdrawMUSDWithSignature(7, hints, payer, merchant, sig, deadline)
-          ──  TroveManager.getCurrentICR(payer) ≥ 150%  or revert IcrBelowFloor   (all-or-nothing)
-          ──  emit Paid(orderId, payer, merchant, 12, 5, 7)
-merchant  ──  /merchant lists the Paid event; the link now shows "Already paid"
-```
+Enforced on-chain by [`MezherPay.sol`](contracts/src/MezherPay.sol):
 
-What Mezher uses from Mezo:
-- **MUSD** (ERC20Permit, domain "Mezo USD" v1) for the balance part.
-- **BorrowerOperationsSignatures.withdrawMUSDWithSignature** to borrow on the payer's behalf with the merchant as recipient (EIP-712 `WithdrawMUSD`, nonce + deadline, ECDSA).
-- **HintHelpers / SortedTroves** for the Trove re-insertion hints, **TroveManager + PriceFeed** for the ICR check.
+- **Ratio floor.** After borrowing, the payer's Trove must stay at an ICR of at least 150%, or the whole payment reverts (`IcrBelowFloor`). The UI blocks payments below 150.5%.
+- **Money only goes to the merchant the payer signed for.** Mezo's borrow signature binds the recipient, so neither the relayer nor a front-runner can redirect it.
+- **Balance-only payments come from the payer.** When nothing is borrowed, the MUSD permit names no merchant, so `pay()` requires the payer to send it (`BalanceOnlyNeedsPayer`).
+- **No owner, no upgrades, no custody.** The contract holds no funds between calls.
 
-Safety rules enforced on-chain by `MezherPay`:
-- After borrowing, the payer's Trove must stay at **ICR ≥ 150%** or the whole payment reverts (`IcrBelowFloor`). The UI blocks below 150.5%.
-- The merchant is bound by Mezo's borrow signature, so a relayer or a front-runner cannot redirect the money.
-- A payment with nothing borrowed must be sent by the payer itself (`BalanceOnlyNeedsPayer`): the MUSD permit names no merchant.
-- No owner, no upgradeability, no funds held between calls.
+The relay endpoint validates every request, rate-limits per payer and IP, de-duplicates orders, simulates before sending, and never logs signatures. Details and known risks: [`docs/SECURITY.md`](docs/SECURITY.md).
 
-## Integrate MezherPay
+## Deployments
 
-Any app or protocol can call `pay` with the payer's two signatures; it does not have to be our relayer.
+Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
+
+| Contract | Address |
+| --- | --- |
+| **MezherPay** | [`0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b`](https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract) (verified, block 16241205) |
+| MUSD | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
+| BorrowerOperationsSignatures | `0xD757e3646AF370b15f32EB557F0F8380Df7D639e` |
+| BorrowerOperations | `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5` |
+| TroveManager | `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0` |
+
+Reference payment: [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5), 11 MUSD borrowed from the payer's Trove straight to the merchant, sent by the relayer. More in [`docs/hackathon/DEPLOYMENTS.md`](docs/hackathon/DEPLOYMENTS.md).
+
+## Integrate
+
+`MezherPay` is a public building block: any wallet, app or protocol can submit a payment with the payer's signatures.
 
 ```solidity
 struct Payment   { address payer; address merchant; uint256 amount; uint256 fromBalance; bytes32 orderId; }
-struct PermitSig { uint256 deadline; uint8 v; bytes32 r; bytes32 s; }               // ignored when fromBalance == 0
-struct BorrowSig { address upperHint; address lowerHint; uint256 deadline; bytes signature; } // ignored when nothing is borrowed
+struct PermitSig { uint256 deadline; uint8 v; bytes32 r; bytes32 s; }                         // ignored if fromBalance == 0
+struct BorrowSig { address upperHint; address lowerHint; uint256 deadline; bytes signature; } // ignored if nothing is borrowed
 
 function pay(Payment calldata p, PermitSig calldata permit, BorrowSig calldata borrow) external;
+
 event Paid(bytes32 indexed orderId, address indexed payer, address indexed merchant,
            uint256 amount, uint256 fromBalance, uint256 borrowed);
 ```
 
-The typed data builders, hint lookup and quote math are in [`web/lib/signatures.ts`](web/lib/signatures.ts), [`web/lib/hints.ts`](web/lib/hints.ts) and [`web/lib/quote.ts`](web/lib/quote.ts); the ABI is [`web/lib/abi/MezherPay.ts`](web/lib/abi/MezherPay.ts).
+Ready-made helpers (TypeScript, viem):
 
-## Run it locally
-
-Requirements: Node.js, pnpm, [Foundry](https://book.getfoundry.sh/).
-
-```bash
-cd web && pnpm install
-cp .env.example .env.local      # set NEXT_PUBLIC_MEZHER_PAY_ADDRESS, NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK, and (server only) RELAYER_PRIVATE_KEY
-pnpm dev                        # http://localhost:3000
-```
-
-To pay you need a wallet on Mezo testnet with an MUSD Trove: get test BTC from the [faucet](https://faucet.test.mezo.org) and open a Trove at [testnet.mezo.org](https://testnet.mezo.org). The relayer key only lives in the server environment and pays gas in test BTC.
-
-## Tests
-
-```bash
-cd contracts && forge test --match-contract MezherPayTest                                     # 17 unit tests
-cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol   # 4 fork tests against the real Mezo contracts
-cd web && pnpm vitest run                                                                     # 76 tests: link parsing, quote/ICR, Trove opening, signatures, hints, relay, checkout, logs, QR
-cd web && pnpm build
-```
-
-The fork tests open a real Trove on a fork of Mezo testnet and run the 5 + 7 split, a replayed signature, the ICR floor and a redirect attempt. Mezo's price oracle is a native precompile that does not exist in Foundry's EVM, so `PriceFeed.fetchPrice()` is mocked at the live price in those tests; every other contract is the real one.
-
-## Repository
-
-| Path | What |
+| File | What |
 | --- | --- |
-| `contracts/src/MezherPay.sol` | the only product contract |
-| `contracts/test/` | unit tests (mocks) and fork tests (real Mezo testnet) |
-| `web/app/` | Next.js 14 app: `/` landing, `/pay` checkout, `/merchant` links + payments, `/terms`, `/api/relay` |
-| `web/lib/` | link parsing, quote, signatures, hints, relay handler, Paid log reader (all unit tested) |
-| `docs/` | PRD, architecture, security, design system, testing, deployments |
+| [`web/lib/signatures.ts`](web/lib/signatures.ts) | EIP-712 typed data for the MUSD permit and Mezo `WithdrawMUSD` |
+| [`web/lib/hints.ts`](web/lib/hints.ts) | Trove hints for the borrow |
+| [`web/lib/quote.ts`](web/lib/quote.ts) | Split, fee and ratio math, including the 150.5% floor |
+| [`web/lib/abi/MezherPay.ts`](web/lib/abi/MezherPay.ts) | Typed ABI |
 
-Stack: Solidity 0.8.28 (EVM london) + Foundry + OpenZeppelin 5; Next.js 14, React 18, viem, wagmi, RainbowKit with Mezo Passport; vitest.
+## Getting started
 
-## Status and limits
+**Requirements:** Node.js, [pnpm](https://pnpm.io), [Foundry](https://book.getfoundry.sh) (for the contracts).
 
+```bash
+git clone https://github.com/woydarko/mezher.git
+cd mezher/web
+pnpm install
+cp .env.example .env.local
+pnpm dev
+```
+
+Then open http://localhost:3000. Fill `.env.local` with:
+
+| Variable | Value |
+| --- | --- |
+| `NEXT_PUBLIC_MEZHER_PAY_ADDRESS` | `0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b` |
+| `NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK` | `16241205` |
+| `NEXT_PUBLIC_DEMO_MERCHANT` | any address that should receive the demo payment |
+| `RELAYER_PRIVATE_KEY` | a burner key with a little test BTC, **server only**, never committed |
+
+To pay, use a wallet on Mezo testnet: get test BTC from the [faucet](https://faucet.test.mezo.org), then open a Trove in the checkout or at [testnet.mezo.org](https://testnet.mezo.org).
+
+## Testing
+
+| Suite | Command | Covers |
+| --- | --- | --- |
+| Contract unit (17) | `cd contracts && forge test --match-contract MezherPayTest` | Split, permit front-run, signature checks, ICR floor, redirect attempts |
+| Contract fork (4) | `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol` | The real Mezo contracts on a testnet fork: 5 + 7 split, replay, ICR floor, redirect |
+| Web unit (76) | `cd web && pnpm vitest run` | Link parsing, quote and ratio, Trove opening, signatures, hints, relay, checkout state, payment logs, QR |
+| Build | `cd web && pnpm build` | Type check and production build |
+
+Mezo's price oracle is a native precompile that Foundry's EVM does not have, so the fork tests pin `PriceFeed.fetchPrice()` to the live price. Every other contract in those tests is the real one.
+
+## Project structure
+
+```
+contracts/
+  src/MezherPay.sol        the product contract
+  test/                    unit tests (mocks) and fork tests (real Mezo testnet)
+  script/Deploy.s.sol      deployment script
+web/
+  app/                     Next.js pages: / landing, /pay checkout, /merchant, /terms, /api/relay
+  components/              crayon UI components
+  lib/                     link, quote, Trove, signatures, hints, relay, payment logs (all unit tested)
+docs/                      product, architecture, security, design system, testing, deployments
+```
+
+**Stack:** Solidity 0.8.28 (EVM london), Foundry, OpenZeppelin 5 · Next.js 14, React 18, viem, wagmi, RainbowKit with Mezo Passport · vitest.
+
+## Status and roadmap
+
+**Now (Wave 1):** working on Mezo testnet, end to end: payment links with QR, gasless borrow-to-pay checkout, in-app Trove opening, merchant payment history.
+
+**Known limits**
 - Testnet only. MezherPay has had an AI-assisted security review, not a professional audit.
-- A payer without a Trove can open one from the checkout (`BorrowerOperations.openTrove`, BTC sent from their own wallet); this path is unit tested and checked against testnet with `eth_call`, not yet run end to end.
-- Merchants get a QR code of each payment link for paying at a counter.
+- Opening a Trove from the checkout is unit tested and checked against testnet with `eth_call`; it has not yet been run end to end from the UI.
 - The relay keeps its rate limit in memory per server instance.
-- Unpaid orders exist only inside their link; there is no database.
+- Unpaid orders live only inside their link; there is no database yet.
 
-Security notes and known risks: [`docs/SECURITY.md`](docs/SECURITY.md), [`docs/hackathon/DEPLOYMENTS.md`](docs/hackathon/DEPLOYMENTS.md).
+**Next**
+- Order lookup and merchant notifications (needs a small database).
+- Pay for APIs and agents over x402 with borrowed MUSD.
+- A professional audit before any mainnet deployment.
+
+## Credits
+
+- [OpenZeppelin Contracts](https://github.com/OpenZeppelin/openzeppelin-contracts) 5.1 (MIT) and [forge-std](https://github.com/foundry-rs/forge-std) are vendored in `contracts/lib/` with their licenses.
+- [Shantell Sans](https://github.com/arrowtype/shantell-sans) (SIL Open Font License 1.1) is the UI typeface and is embedded in the README illustrations.
+- Built on [Mezo](https://mezo.org) and its MUSD contracts ([mezo-org/musd](https://github.com/mezo-org/musd)).
