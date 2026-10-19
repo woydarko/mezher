@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { DemoMockup } from "@/components/DemoMockup";
 import { Doodle } from "@/components/Doodle";
+import { HeroScenery } from "@/components/HeroScenery";
 import { Reveal } from "@/components/Reveal";
 import styles from "@/components/ui.module.css";
 import { buildLink, randomOrder } from "@/lib/link";
@@ -79,30 +80,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-
-        <figure
-          className={l.sketch}
-          aria-label="Example: 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC makes 12 MUSD for the merchant"
-        >
-          <div className={l.part}>
-            <span className={l.amount + " mono"}>5 MUSD</span>
-            <span>from your wallet</span>
-          </div>
-          <span className={l.op} aria-hidden>
-            +
-          </span>
-          <div className={l.part + " " + l.partBorrow}>
-            <Doodle name="coin" className={l.partCoin} />
-            <span className={l.amount + " mono"}>7 MUSD</span>
-            <span>borrowed against your BTC</span>
-          </div>
-          <Doodle name="arrow" className={l.arrow} />
-          <div className={l.part + " " + l.partTotal}>
-            <span className={l.amount + " mono"}>12 MUSD</span>
-            <span>lands with the merchant</span>
-          </div>
-          <figcaption className={l.caption}>Your BTC never leaves your Trove.</figcaption>
-        </figure>
+        <HeroScenery className={l.scenery} />
       </section>
 
       <section className={l.section} aria-labelledby="watch">

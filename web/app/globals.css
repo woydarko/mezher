@@ -64,6 +64,8 @@ body {
 }
 
 body {
+  /* the full-bleed hero is 100vw wide; clip (not hidden) so the sticky header keeps working */
+  overflow-x: clip;
   /* full frame: header, page, footer; the page grows so the footer sits at the bottom */
   display: flex;
   flex-direction: column;

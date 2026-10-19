@@ -1,24 +1,28 @@
+/* Full-bleed hero: the crayon scenery spans the window, the text stays centred on plain paper above it. */
 .hero {
-  display: grid;
-  gap: var(--space-12);
+  position: relative;
+  isolation: isolate;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-top: calc(-1 * var(--space-8));
+  min-height: calc(100dvh - var(--header-h));
+  padding: clamp(48px, 9vh, 112px) var(--space-4) clamp(150px, 27vw, 390px);
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  padding-top: var(--space-8);
-}
-
-@media (min-width: 900px) {
-  .hero {
-    grid-template-columns: 1.1fr 0.9fr;
-  }
+  text-align: center;
+  overflow: hidden;
 }
 
 .heroText {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-6);
+  max-width: 860px;
 }
 
 .kicker {
-  align-self: flex-start;
   padding: 2px 12px;
   border: 2px solid var(--color-ink);
   border-radius: var(--radius-sketch);
@@ -46,116 +50,29 @@
 .lead {
   font-size: 20px;
   line-height: 1.5;
+  max-width: 54ch;
 }
 
 .ctas {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   gap: var(--space-4);
-  max-width: 440px;
 }
 
 .ctas > * {
+  width: auto;
   white-space: nowrap;
 }
 
-@media (min-width: 560px) {
-  .ctas {
-    grid-template-columns: auto auto;
-    justify-content: start;
-  }
-}
-
-/* The split drawn like a sum on paper. */
-.sketch {
-  position: relative;
-  margin: 0;
-  padding: var(--space-8) var(--space-6);
-  display: grid;
-  gap: var(--space-3);
-  justify-items: center;
-  isolation: isolate;
-  transform: rotate(1.2deg);
-}
-
-.sketch::before {
-  content: "";
+.scenery {
   position: absolute;
-  inset: 0;
+  left: 0;
+  bottom: 0;
   z-index: -1;
-  background: var(--color-paper-2);
-  border: var(--stroke) solid var(--color-ink);
-  border-radius: var(--radius-sketch-2);
-  box-shadow: 6px 7px 0 var(--color-ink);
-  filter: url(#sketch);
-}
-
-.part {
-  position: relative;
   width: 100%;
-  max-width: 300px;
-  padding: var(--space-3) var(--space-4);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  isolation: isolate;
-}
-
-.part::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--color-paper);
-  border: var(--stroke) solid var(--color-ink);
-  border-radius: var(--radius-sketch);
-  filter: url(#sketch);
-}
-
-.partBorrow::before {
-  background: repeating-linear-gradient(-58deg, var(--color-paper) 0 9px, var(--color-paper-2) 9px 12px);
-}
-
-/* the result gets the yellow highlighter; orange is kept for the Pay action and the "Keep" circle */
-.partTotal::before {
-  background: repeating-linear-gradient(
-    -58deg,
-    var(--color-yellow) 0 9px,
-    color-mix(in srgb, var(--color-yellow) 55%, var(--color-paper)) 9px 12px
-  );
-}
-
-.amount {
-  font-size: 30px;
-  line-height: 1.1;
-}
-
-.op {
-  font-size: 34px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.arrow {
-  width: 64px;
-  height: 40px;
-  transform: rotate(90deg);
-}
-
-.partCoin {
-  position: absolute;
-  left: -22px;
-  top: -18px;
-  width: 46px;
-  height: 46px;
-  transform: rotate(-12deg);
-}
-
-.caption {
-  margin-top: var(--space-2);
-  font-weight: 800;
-  font-size: 17px;
-  color: var(--color-green-ink);
+  height: auto;
+  pointer-events: none;
 }
 
 /* the one text-only band: a quieter rhythm between the demo and the FAQ */
