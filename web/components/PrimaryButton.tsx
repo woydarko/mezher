@@ -1,7 +1,7 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
 type Props = {
@@ -25,7 +25,7 @@ export function PrimaryButton({ children, loading, loadingLabel, disabled, disab
         aria-describedby={showReason ? "primary-disabled-reason" : undefined}
         onClick={onClick}
       >
-        {loading && <Loader2 size={18} className={styles.spin} aria-hidden />}
+        {loading && <Doodle name="spinner" className={styles.icon + " " + styles.spin} />}
         {loading && loadingLabel ? loadingLabel : children}
       </button>
       {showReason && (

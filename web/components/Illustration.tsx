@@ -28,7 +28,7 @@ const SCENES: Record<"link" | "sign" | "paid", ReactNode> = {
       />
       <path
         d="M118 38l-3 3c-4 4-10 4-13 0s-4-9 0-13l4-4c4-4 9-4 13 0M132 25l3-3c4-4 10-4 13 0s4 9 0 13l-4 4c-4 4-9 4-13 0M116 36l17-12"
-        style={s({ stroke: "var(--color-blue-ink)", w: 4 })}
+        style={s({ stroke: "var(--color-orange-ink)", w: 4 })}
       />
     </>
   ),
@@ -43,7 +43,7 @@ const SCENES: Record<"link" | "sign" | "paid", ReactNode> = {
       />
       <path
         d="M46 82c5-11 9 3 13-4s8-8 10 1 6-6 11-3 4 7 10 0"
-        style={s({ stroke: "var(--color-blue-ink)", w: 3.5 })}
+        style={s({ w: 3.5 })}
         transform="rotate(-4 75 55)"
       />
       <path d="M112 96l32-56 11 6-32 56-13 5z" style={s({ fill: "var(--color-yellow)" })} />

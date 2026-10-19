@@ -36,7 +36,24 @@ const DOODLES = {
   },
   underline: {
     viewBox: "0 0 200 16",
-    paths: [{ d: "M4 11c44-7 98-8 192-3M30 14c50-4 90-4 140-2", stroke: "var(--color-orange)", width: 4 }],
+    paths: [{ d: "M4 10c44-6 98-7 192-3", stroke: "var(--color-yellow)", width: 9 }],
+  },
+  // Crayon stand-ins for status/action icons, so no machine-drawn glyph sits next to the crayon UI.
+  warning: {
+    viewBox: "0 0 64 64",
+    paths: [{ d: "M32 7L59 55H5zM32 24v15M32 47v1", stroke: "var(--color-red-ink)", width: 5 }],
+  },
+  spinner: {
+    viewBox: "0 0 64 64",
+    paths: [{ d: "M32 8c14 0 24 11 24 24S45 56 32 56 8 45 8 32c0-6 2-11 6-15", width: 6 }],
+  },
+  external: {
+    viewBox: "0 0 64 64",
+    paths: [{ d: "M36 10h18v18M54 10L28 36M46 40v14H10V18h14", width: 5 }],
+  },
+  copy: {
+    viewBox: "0 0 64 64",
+    paths: [{ d: "M22 12h30v36H22zM14 20v34h28", width: 5 }],
   },
 } as const;
 

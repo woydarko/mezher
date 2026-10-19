@@ -1,5 +1,5 @@
-import { AlertTriangle } from "lucide-react";
 import { useId, type InputHTMLAttributes } from "react";
+import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
 type Props = InputHTMLAttributes<HTMLInputElement> & { label: string; helper?: string; error?: string };
@@ -24,7 +24,7 @@ export function Field({ label, helper, error, ...inputProps }: Props) {
       </span>
       {note && (
         <span id={noteId} className={error ? styles.helper + " " + styles.error : styles.helper}>
-          {error && <AlertTriangle size={14} aria-hidden />} {note}
+          {error && <Doodle name="warning" className={styles.iconSmall} />} {note}
         </span>
       )}
     </div>

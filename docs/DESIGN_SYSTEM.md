@@ -1,66 +1,69 @@
 # Design System
 
-Status: every value below is **Proposal - needs approval** until the owner approves Phase 2.
+Status: **approved by the owner 2026-10-19** (crayon redesign). Spec and reasoning: `docs/superpowers/specs/2026-10-19-crayon-ui-design.md`. antislop audit: `anti-slop/audit-001-2026-10-19.md`.
 
 ## Design direction
-- Brand attributes: **calm** (money moves, nothing flashes), **exact** (every number shown to the cent with its source), **warm Bitcoin** (orange used only for the one action that matters).
-- Concept: a checkout receipt. One narrow column, numbers in monospace, the split "from balance / borrowed" reads like receipt lines.
-- Supported devices: desktop web first (demo laptop, 1280×800 and up). Mobile web 390px must not break (merchant may open links on a phone), but it is not polished beyond that.
-- References (borrow, do not copy):
-  - Stripe Checkout: single-column payment summary, clear primary button, receipt after pay.
-  - Mezo app (testnet.mezo.org): Trove vocabulary (collateral, debt, ratio), so payers recognise the numbers.
-  - Paper thermal receipts: monospace amounts, dotted leaders between label and value.
+- Owner brief: every screen looks sketched in MS Paint with crayons; comic-like handwriting that is not Comic Sans; "fun and fresh" because BTC/finance UIs feel stiff and institutional.
+- Brand attributes: **playful** (crayon on paper, small tilts, a drawn check when you pay), **exact** (amounts, ratio and fee always readable and unambiguous), **honest** (testnet labelled, no claim without evidence).
+- Design Read: Bitcoin checkout landing + payment app for Mezo users and hackathon judges, hand-drawn crayon-on-paper language, dial **ENERGY 3 / RHYTHM 2 / MOTION 2**.
+- Identity motif: a wobbly crayon outline with waxy grain (SVG filter `#sketch` on `::before` drawings only, never on text) plus the yellow highlighter.
+- Supported devices: desktop and mobile web; 390 px must work fully (44 px tap targets, no overflow).
 
 ## UI tokens
-Implemented once as CSS variables in `web/app/globals.css`; components only consume variables.
-| Token | Value | Usage |
-| --- | --- | --- |
-| color.background | `#0F0D0B` | Main canvas (dark only) |
-| color.surface | `#1A1714` | Cards, receipt panel |
-| color.border | `#2E2924` | Card borders, dividers, dotted leaders |
-| color.text | `#F4EFE6` | Primary copy |
-| color.muted | `#A39A8C` | Labels, helper text |
-| color.primary | `#F7931A` | Pay / Create buttons, focus ring |
-| color.on-primary | `#0F0D0B` | Text on primary buttons |
-| color.success | `#4CC38A` | Paid state, healthy ratio |
-| color.warning | `#E5B84B` | Ratio 150–200% |
-| color.error | `#FF6B5B` | Errors (always with a text label) |
-| font.body | `"Instrument Sans", system-ui, sans-serif` — 16px / 400 / 1.5 | Body copy |
-| font.mono | `"JetBrains Mono", ui-monospace, monospace` — 15px / 500 / 1.4 | Amounts, addresses, ratios |
-| space.unit | 4px (scale 4, 8, 12, 16, 24, 32, 48) | Spacing |
-| radius.control | 10px | Inputs and buttons |
-| radius.card | 16px | Cards |
+Implemented once as CSS variables in `web/app/globals.css`; components only consume variables. Contrast checked with the antislop contrast tool on paper.
+| Token | Value | Usage | Why (one line) |
+| --- | --- | --- | --- |
+| color.paper | `#FFFDF7` | page and card fill | crayon needs paper; light only by decision |
+| color.paper-2 | `#F7F0E1` | insets, footer | a second sheet, not a new colour |
+| color.ink | `#1F1B16` | text, outlines | black crayon |
+| color.muted | `#5F574C` (6.26:1 on paper-2) | labels, helper text | softer crayon, still AA |
+| color.orange | `#F7931A` (ink on it 7.45:1) | Pay buttons, the "Keep" circle | the one accent, Bitcoin orange, only where you act |
+| color.orange-ink | `#A84F00` (5.46:1) | ratio 150-200% text | orange that can be read as text |
+| color.yellow | `#FFE44D` | highlighter: labels, section underlines, active step, result box | marks "look here" without a second accent |
+| color.green / green-ink | `#8BD17C` / `#2E6B2F` (6.33:1) | healthy ratio fill / success text, checks | status only |
+| color.red / red-ink | `#FF8A80` / `#B3261E` (6.43:1) | danger fill / errors | status only |
+| color.blue-ink | `#1E4FD8` (6.52:1) | links, focus ring | links and focus only, never decoration |
+| font.body | Shantell Sans (OFL, `next/font/google`), 17px / 1.55, axis INFM 40 | everything | owner asked for comic-like, not Comic Sans; Shantell was drawn as exactly that |
+| numbers | Shantell Sans 700, INFM 0, `tabular-nums` (`.mono`) | amounts, addresses, ratios | same hand, steadier, digits aligned |
+| radius.sketch | `255px 18px 225px 18px / 18px 225px 18px 255px` (+ mirrored) | cards, buttons, inputs | uneven radii read as a crayon loop |
+| stroke | 3px | outlines | crayon line weight |
+| shadow.sketch | `4px 5px 0 ink` | primary button, hero sum, demo devices only | only things you press or the hero drawings are raised |
+| motion | `--ease: cubic-bezier(.22,1,.36,1)`, 180 / 320 / 700 / 800 ms | all transitions | fast start, soft landing |
+| background | faint blue ruling every 32px | page | sketchbook paper, the one texture |
 
 ## Layout rules
-- Container: single column, max width 480px for `/pay`, 720px for `/merchant`; 16px side gutter on mobile, 24px on desktop.
-- Breakpoints: `sm` 390px (baseline), `md` 768px, `lg` 1280px.
-- Grid/spacing: vertical stack, 16px between rows inside a card, 24px between cards. Labels left, values right (receipt lines) with a dotted leader in `color.border`.
-- Mobile behaviour: same single column; the header wallet button collapses to an icon + short address.
+- Full frame: header, then each page fills the screen (`min-height: 100dvh - header`), footer below the fold.
+- Containers: 520px (`/pay`, centred vertically), 760px (`/merchant`, `/terms`), 1080px (landing). Gutter 16px mobile, 24px desktop.
+- Landing rhythm (RHYTHM 2): hero split (text + drawn sum), animated demo with synced steps, a text-only safety band between dashed rules, FAQ, closing CTA card. Sections 96-160px apart.
+- Mobile: single column; header keeps logo coin + two links + wallet button at 44px; the payments table becomes stacked rows.
 
 ## Components
-State set for every interactive component: default, hover, focus-visible (2px `color.primary` ring, 2px offset), disabled (40% opacity + `cursor: not-allowed` + reason text nearby), loading (spinner + verb label, e.g. "Signing…"), success, error.
-- **Primary button**: full width in cards, 48px tall, `color.primary` background, `color.on-primary` text, 600 weight. Loading keeps width and swaps the label to the current step ("Sign permit…", "Sign borrow…", "Sending…"). Never two primary buttons on one screen.
-- **Secondary button**: transparent, 1px `color.border` border, `color.text` label (e.g. "Pay with my own gas", "Copy link").
-- **Form field**: label above (14px muted), input 44px tall with `color.surface` background and a 1px border; helper text below; the error replaces the helper text in `color.error` with an icon and text; `aria-describedby` links them.
-- **Receipt line**: `label ……… value` with the value in `font.mono`; an optional sub-line in muted text (e.g. "fee 0.1%").
-- **Ratio meter**: horizontal bar 0–300% with markers at 110% (liquidation) and 150% (safety floor); "now" and "after" values as text; colour by band (error < 150, warning 150–200, success ≥ 200).
-- **Card**: `color.surface`, 1px `color.border`, `radius.card`, 24px padding.
-- **Toast/inline status**: inline under the button (no floating toasts) for tx status, with an explorer link when a hash exists.
-- **Navigation**: top bar with the logo text "Mezher" (left), links "Pay" / "Merchant", and the wallet button (right).
+States for every interactive component: default, hover (slight tilt), focus-visible (3px dashed blue-ink ring), disabled (dashed outline, muted label, reason text), loading (spinning crayon scribble + verb label), success, error.
+- **Primary button**: orange hatch fill, ink outline, hard shadow; tilts on hover, presses down on click. One per screen.
+- **Secondary button**: paper fill, ink outline, no shadow.
+- **Field**: label above, hand-drawn box, yellow wash on focus, error text with a crayon warning mark.
+- **Receipt line**: label, dotted crayon leader, value in `.mono`.
+- **Ratio meter**: hand-drawn bar 0-300%, hatch fill by band (red < 150, orange 150-200, green >= 200), ticks "110 danger" and "150 safe line", `role="meter"`.
+- **Card**: crayon outline on paper, slight tilt, no shadow (sits flat on the page).
+- **Status line**: crayon doodle icon (spinner, check, warning) + text, explorer link with a crayon "external" mark.
+- **Wallet button**: RainbowKit `ConnectButton.Custom` in the crayon button style; modal on RainbowKit `lightTheme` with orange accent and Shantell Sans.
+- **Doodles** (`components/Doodle.tsx`) and **illustrations** (`components/Illustration.tsx`): inline SVG drawn for Mezher (BTC coin, shop + link, signed receipt, BTC lock + merchant bag). No icon library.
+- **Demo mockup** (`components/DemoMockup.tsx`): payer phone + merchant laptop + the three steps, one 8s timeline played once on scroll, then a Replay button.
 
 ## Accessibility
-- Keyboard: every control reachable in visual order; Enter submits forms; Escape closes the wallet modal (RainbowKit default). Focus is always visible (token ring).
-- Contrast: body text and muted text checked ≥ 4.5:1 on `color.background` and `color.surface`; button text ≥ 4.5:1 on `color.primary`. Verified in Phase 5 with a contrast checker; results recorded in TESTING.md.
-- Semantic labels: buttons have text labels; amounts carry `aria-label` with the unit ("12 MUSD"); the ratio meter has `role="meter"` with `aria-valuenow`.
-- Motion: respects `prefers-reduced-motion` (all transitions off).
+- Keyboard: every control reachable in visual order; Enter submits forms; Escape closes the wallet modal. Focus always visible (dashed blue-ink ring; inputs draw it on their wrapper).
+- Contrast: every text token >= 4.5:1 on paper (values in the token table).
+- Semantic labels: decorative drawings are `aria-hidden`; the hero sum and demo carry text alternatives; amounts carry the unit; ratio meter has `role="meter"`.
+- Motion: nothing loops forever (the demo plays once with Replay; the loading scribble spins only while loading). `prefers-reduced-motion`: every animation off, final frames shown.
 
 ## Screen states
 | Screen | Empty | Loading | Error | Populated |
 | --- | --- | --- | --- | --- |
-| `/pay` checkout (J1, F-02/F-03) | missing/invalid link params → "This payment link is incomplete" | skeleton receipt lines while reading the chain | RPC down → "Can't reach Mezo testnet. Retry"; no Trove → CTA | order + split + ratio + Pay |
+| `/pay` checkout (J1, F-02/F-03) | no link → "Pay a link" paste form; invalid link → "This payment link is incomplete" + paste form | skeleton receipt lines while reading the chain | RPC down → "Can't reach Mezo testnet. Retry"; no Trove → CTA | order + split + ratio + Pay |
 | `/pay` receipt (J1, F-07) | — | "Waiting for confirmation…" with tx link | reverted → reason + Retry | "Paid 12 MUSD" + tx link + new ratio |
 | `/merchant` (J2, F-06/F-07) | no payments yet → "No payments yet. Share a link to get paid." | skeleton list | invalid input inline; RPC down banner | link builder + payments list |
-| Landing `/` (J3) | — | — | — | one-line pitch, "Try the demo checkout" and "I'm a merchant" |
+| Landing `/` (J3) | n/a | n/a | n/a | hero + drawn sum, animated demo with steps, safety band, FAQ, closing CTA |
+| `/terms` | n/a | n/a | n/a | testnet terms and privacy |
 
 ## Approval
 Design owner: repo owner. Source of truth: this file (ASCII wireframes below). No Figma file.
@@ -72,13 +75,13 @@ Design owner: repo owner. Source of truth: this file (ASCII wireframes below). N
 ### 1. Screen inventory
 | Screen | PRD journey / feature | Purpose | Key components | States | Wireframe |
 | --- | --- | --- | --- | --- | --- |
-| `/` Landing | J3 | Explain in one line, route to demo | Hero line, 2 buttons | populated | W0 |
+| `/` Landing | J3 | Explain and route to the demo | Hero + drawn sum, DemoMockup, safety band, FAQ, CTA | populated | W0 |
 | `/pay` Checkout | J1, F-01, F-02, F-03, F-04, F-05 | Review and pay | Order card, Trove card, ratio meter, receipt lines, primary button, secondary fallback | empty, loading, error, no-trove, ratio-blocked, already-paid, populated, signing, sending | W1 |
 | `/pay` Receipt | J1, F-07 | Prove the payment happened | Status line, receipt lines, tx link, new ratio | pending, failed, success | W2 |
 | `/merchant` | J2, F-06, F-07 | Create a link, see payments | Form, link output + copy, payments table | empty, loading, error, populated | W3 |
 
 ### 2. Flow
-Golden path: `/` → "Try the demo checkout" → `/pay?to=…&amount=12&order=…&label=Coffee` → Connect wallet → (switch network if needed) → review split (5 balance + 7 borrow) → **Pay** → sign permit → sign borrow → relayer sends → Receipt "Paid 12 MUSD" → (second tab) `/merchant` shows the payment at the top.
+Golden path: `/` → "Try the Demo" → `/pay?to=…&amount=12&order=…&label=Coffee` → Connect wallet → (switch network if needed) → review split (5 balance + 7 borrow) → **Pay** → sign permit → sign borrow → relayer sends → Receipt "Paid 12 MUSD" → (second tab) `/merchant` shows the payment at the top.
 Main failure branch: the ratio after borrowing is below 150% → Pay disabled with the reason and a link "Add collateral on Mezo". Relayer error → "Pay with my own gas" → wallet tx prompt → Receipt.
 
 ### 3. Wireframes (ASCII)
@@ -131,58 +134,60 @@ W3 `/merchant`
 │  12.00  Coffee  0x12…ab  5 bal / 7 borrow  ↗  │
 └──────────────────────────────────────────────┘
 ```
-W0 Landing: logo, the line "Pay with your Bitcoin. Keep your Bitcoin.", a sub-line "Borrow only what your MUSD balance doesn't cover, straight to the merchant. No gas, one click.", and two buttons.
+W0 Landing: "Pay with your Bitcoin. Keep your Bitcoin." with "Keep" circled in orange crayon, the lead "Short on MUSD? Mezher borrows only the missing part against your BTC, straight to the merchant, in one transaction. No selling, and no gas for the part you borrow.", buttons "Try the Demo" / "I'm a merchant", and a drawn sum 5 + 7 = 12.
 
 ### 4. Type scale
-Families: Instrument Sans (OFL, Google Fonts) for text; JetBrains Mono (OFL) for numbers; fallbacks `system-ui` / `ui-monospace`. Loaded with `next/font/google` (self-hosted at build).
-| Style | Size / line height | Weight |
+Family: Shantell Sans (OFL, Google Fonts) for everything, self-hosted by `next/font`; fallbacks Segoe Print, Bradley Hand, cursive.
+| Style | Size / line height | Weight / informal axis |
 | --- | --- | --- |
-| h1 | 32 / 40 | 600 |
-| h2 | 24 / 32 | 600 |
-| h3 | 18 / 26 | 600 |
-| h4 / section label | 12 / 16, uppercase, 0.08em tracking | 600 |
-| body | 16 / 24 | 400 |
-| small | 14 / 20 | 400 |
-| caption | 12 / 16 | 400 |
-| amount (mono) | 15 / 21, big total 28 / 34 | 500 |
-Max line length 60ch.
+| h1 | clamp(32px, 6vw, 56px) / 1.08 | 800 / 80 |
+| h2 | clamp(24px, 3.6vw, 34px) / 1.15 | 800 / 80 |
+| h3 | 20 / 1.3 | 800 / 80 |
+| label (`.section-label`) | 17 / 1.2, sentence case on the yellow highlighter | 800 |
+| body | 17 / 1.55 | 400 / 40 |
+| small | 15 / 1.4 | 400 |
+| amount (`.mono`) | inherits size, tabular numbers | 700 / 0 |
+Max line length 62ch.
 
 ### 5. Color roles
-Dark only (decision). Background `#0F0D0B`, surface `#1A1714`, border `#2E2924`, text `#F4EFE6`, muted `#A39A8C`, primary `#F7931A`, accent = primary (no second accent), success `#4CC38A`, warning `#E5B84B`, error `#FF6B5B`, focus ring `#F7931A`. Contrast ratios: to be measured in Phase 5 and written here (target ≥ 4.5:1 for text roles).
+Light only (decision: crayon is drawn on paper). Core: paper + ink (neutral), orange (the one accent), yellow (highlighter). Status: green, red. Links and focus: blue-ink. Contrast values are in the token table.
 
 ### 6. Spacing and grid
-4px base; scale 4/8/12/16/24/32/48. Containers 480px (pay) / 720px (merchant). Breakpoints 390 / 768 / 1280. Mobile-first CSS.
+4px base; scale 4/8/12/16/24/32/48/64; landing sections 96-160px apart. Containers 520 / 760 / 1080. Mobile-first CSS.
 
 ### 7. Icons and imagery
-One set: Lucide (ISC license) via `lucide-react`; icons used: Check, ExternalLink, Copy, AlertTriangle, Loader2, Wallet. No illustrations or stock photos. Logo: the word "Mezher" in Instrument Sans 600 with a small orange dot; no external brand marks except the official "Mezo" name in text.
+No icon library. Crayon doodles and illustrations drawn for Mezher, inline SVG through the `#wobble` filter. Logo: crayon BTC coin + the word "Mezher"; favicon: crayon coin with an "M" (owner approved 2026-10-19).
 
-### 8. Motion
-Tokens: `--dur-fast: 120ms`, `--dur-base: 200ms`, `--ease: cubic-bezier(.2,.8,.2,1)`. Animate: button press, receipt lines appearing, the ratio bar moving from "now" to "after". Wow moment: after Pay, the receipt lines tick into place one by one and the merchant amount counts up to 12.00 (≤ 600ms total). `prefers-reduced-motion`: no animation, final values shown immediately.
+### 8. Motion (MOTION 2)
+Purposeful only: buttons tilt on hover and press on click (feedback); the demo mockup plays the golden path once when it scrolls into view and the matching step lights up (explains the product), then rests on the paid frame with a Replay button; the demo and the closing CTA fade in as they enter (owner asked for smooth scroll motion; kept to these two); the receipt check draws itself and two stars pop once (the real success moment). Smooth scrolling. Reduced motion: none of it.
 
 ### 9. Voice and copy
-Tone: plain, short, numbers first. Buttons are verbs with the amount ("Pay 12.00 MUSD", "Create payment link", "Copy link"). Errors = what happened + what to do: "Your Trove would drop below 150%. Pay less or add collateral on Mezo." Empty state: "No payments yet. Share a link to get paid." Wallet microcopy: "Sign to move 5.00 MUSD from your balance", "Sign to borrow 7.00 MUSD to this merchant". Never say "transaction failed" without the reason.
+Plain, short, numbers first, a little playful in headings ("Why it won't bite you"). Buttons are verbs with the amount ("Pay 12.00 MUSD", "Create payment link", "Copy link", "Try the Demo"). Errors say what happened and what to do. No em dash, no claim without evidence ("no gas" only for the borrowed part).
 
 ### 10. Demo conditions
-Laptop, Chrome, 1280×800, browser zoom 110% for screen recording; MetaMask with the pre-funded demo payer; a second browser profile as the merchant. Network: live Mezo testnet; recorded fallback video if the RPC is slow.
+Laptop, Chrome, 1280x800; MetaMask with the pre-funded demo payer; a second browser profile as the merchant. Live Mezo testnet; recorded fallback video if the RPC is slow.
 
 ### 11. Component inventory
-UI library: **none besides RainbowKit** (required by Mezo Passport). Plain CSS modules + CSS variables. Custom components in `web/components/`: `Header`, `Card`, `ReceiptLine`, `RatioMeter`, `PrimaryButton`, `SecondaryButton`, `Field`, `StatusLine`, `PaymentsTable`.
+UI library: **none besides RainbowKit** (required by Mezo Passport). Plain CSS modules + CSS variables. `web/components/`: `Header`, `Footer`, `Card`, `ReceiptLine`, `RatioMeter`, `PrimaryButton`, `SecondaryButton`, `Field`, `StatusLine`, `PaymentsTable`, `WalletButton`, `Doodle`, `Illustration`, `DemoMockup`, `Reveal`.
 
 ### 12. Do / Don't
 - Do use only the CSS variables above; no hex values in components.
+- Do apply `url(#sketch)` to `::before` drawings, never to text.
 - Do show the unit "MUSD" or "BTC" next to every number.
-- Do ship empty, loading, error and success states for every screen before moving on.
-- Do keep one primary button per screen.
-- Do format amounts with `formatUnits` and 2 decimals (fees up to 4).
-- Don't add a UI kit (no Tailwind, MUI, shadcn).
-- Don't add fonts, colours, or icon sets beyond this file.
-- Don't use floating toasts or modals for errors; inline only.
+- Do keep orange for the Pay action and the "Keep" circle; use the yellow highlighter for emphasis.
+- Do ship empty, loading, error and success states for every screen.
+- Don't add an icon library, UI kit or extra font.
+- Don't put a shadow on cards or inputs; only on things you press or the hero drawings.
+- Don't loop an animation forever; give long motion a Replay instead.
 - Don't hide the borrowed amount or the fee anywhere.
-- Don't block the UI on animation; reduced motion = no motion.
 
 ### 13. Design decisions log
 | Date | Decision | Reason |
 | --- | --- | --- |
-| 2026-10-18 | Dark-only receipt layout, Bitcoin orange as the single accent | Calm money UI; one obvious action; matches the BTC theme |
-| 2026-10-18 | No UI kit besides RainbowKit | Mezo Passport requires RainbowKit; fewer deps, faster build |
-| 2026-10-18 | Desktop-first, mobile not broken | Demo is on a laptop; merchants may open links on phones |
+| 2026-10-18 | Dark-only receipt layout, Bitcoin orange as the single accent | Calm money UI (superseded 2026-10-19) |
+| 2026-10-18 | No UI kit besides RainbowKit | Mezo Passport requires RainbowKit; fewer deps |
+| 2026-10-19 | Crayon MS Paint redesign, Shantell Sans, light only | Owner: finance UIs feel stiff; Mezher should be fun and fresh |
+| 2026-10-19 | Lucide removed, crayon doodles instead | One machine-drawn icon set clashed with the crayon UI (antislop R-04) |
+| 2026-10-19 | Demo plays once + Replay, reveal only on demo and closing CTA | No endless motion (WCAG 2.2.2), no template fade-up on every section (antislop R-19) |
+| 2026-10-19 | "How it works" folded into the demo as synced steps | Same story was told twice (antislop C-3) |
+| 2026-10-19 | Logo: crayon BTC coin; favicon crayon coin with "M" | Drawn by Claude, approved by the owner ("nice banget", audit approval) |

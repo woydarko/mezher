@@ -1,11 +1,11 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Check, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { isAddress, type Address } from "viem";
 import { useAccount, usePublicClient } from "wagmi";
 import { Card } from "@/components/Card";
+import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
 import { PaymentsTable } from "@/components/PaymentsTable";
 import { PrimaryButton } from "@/components/PrimaryButton";
@@ -18,6 +18,7 @@ import { fetchPaidLogs } from "@/lib/paid-logs";
 
 const POLL_MS = 5_000;
 const COPIED_MS = 2_000;
+const COPY_TIMEOUT_MS = 2_000;
 
 type Errors = Partial<Record<"to" | "amount" | "order" | "label", string>>;
 
@@ -31,6 +32,7 @@ export default function MerchantPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [url, setUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => setOrder(randomOrder()), []);
   useEffect(() => {
@@ -55,13 +57,24 @@ export default function MerchantPage() {
     setErrors({});
     setUrl(result.url);
     setCopied(false);
+    setCopyFailed(false);
   }
 
   async function copy() {
     if (!url) return;
-    await navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), COPIED_MS);
+    // A blocked or pending clipboard permission can reject or never settle; either way, say so.
+    const ok = await Promise.race([
+      navigator.clipboard.writeText(url).then(
+        () => true,
+        () => false,
+      ),
+      new Promise<boolean>((resolve) => setTimeout(() => resolve(false), COPY_TIMEOUT_MS)),
+    ]);
+    setCopyFailed(!ok);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), COPIED_MS);
+    }
   }
 
   return (
@@ -107,11 +120,14 @@ export default function MerchantPage() {
             <span className={styles.linkText + " mono"}>{url}</span>
             <div>
               <SecondaryButton onClick={copy}>
-                {copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}
+                <Doodle name={copied ? "check" : "copy"} className={styles.icon} />
                 {copied ? "Copied" : "Copy link"}
               </SecondaryButton>
             </div>
           </div>
+        )}
+        {url && copyFailed && (
+          <StatusLine tone="error">Your browser blocked copying. Select the link above and copy it.</StatusLine>
         )}
       </Card>
 

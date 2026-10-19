@@ -1,20 +1,19 @@
-import { AlertTriangle, Check, ExternalLink, Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
 type Tone = "info" | "success" | "error";
 
-const ICONS = { info: Loader2, success: Check, error: AlertTriangle } as const;
+const ICONS = { info: "spinner", success: "check", error: "warning" } as const;
 
 export function StatusLine({ tone, children, href }: { tone: Tone; children: ReactNode; href?: string }) {
-  const Icon = ICONS[tone];
   return (
     <p className={styles.status + " " + styles[tone]} role={tone === "error" ? "alert" : "status"}>
-      <Icon size={16} className={tone === "info" ? styles.spin : undefined} aria-hidden />
+      <Doodle name={ICONS[tone]} className={styles.icon + (tone === "info" ? " " + styles.spin : "")} />
       <span>{children}</span>
       {href && (
-        <a href={href} target="_blank" rel="noreferrer">
-          View on explorer <ExternalLink size={14} aria-hidden />
+        <a href={href} target="_blank" rel="noreferrer" className={styles.inlineLink}>
+          View on explorer <Doodle name="external" className={styles.iconSmall} />
         </a>
       )}
     </p>

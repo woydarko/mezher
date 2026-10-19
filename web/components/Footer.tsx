@@ -36,6 +36,7 @@ export function Footer() {
       <div className={styles.footerBottom}>
         <span className={styles.badge}>Testnet</span>
         <span>Test BTC and MUSD only. No real money moves here.</span>
+        <Link href="/terms">Testnet terms and privacy</Link>
       </div>
     </footer>
   );

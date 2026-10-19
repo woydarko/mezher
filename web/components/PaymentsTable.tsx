@@ -1,7 +1,7 @@
-import { ExternalLink } from "lucide-react";
 import { formatMusd } from "@/lib/format";
 import { explorerTx } from "@/lib/mezo";
 import type { PaidLog } from "@/lib/paid-logs";
+import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
 const short = (a: string) => a.slice(0, 6) + "…" + a.slice(-4);
@@ -39,7 +39,7 @@ export function PaymentsTable({ logs }: { logs: PaidLog[] }) {
             </td>
             <td data-label="Tx">
               <a href={explorerTx(l.txHash)} target="_blank" rel="noreferrer" aria-label="View on explorer">
-                <ExternalLink size={16} aria-hidden />
+                <Doodle name="external" className={styles.icon} />
               </a>
             </td>
           </tr>

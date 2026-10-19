@@ -1,10 +1,27 @@
 /*
- * One 7 s loop shared by every piece. Base styles are the final frame ("paid"), so with
- * prefers-reduced-motion (animations off globally) the mockup simply shows the result.
+ * One 8 s timeline, played once (fill: both) when the figure scrolls into view; .playing starts it.
+ * Every keyframe ends on the final "paid" frame, which is also each element's base style, so with
+ * prefers-reduced-motion (animations off globally) the mockup just shows the result.
  */
 .stage {
-  --loop: 7s;
+  --loop: 8s;
   margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.stage:not(.playing) * {
+  animation-play-state: paused !important;
+}
+
+.run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.devices {
   display: grid;
   gap: var(--space-6);
   justify-items: center;
@@ -12,20 +29,30 @@
 }
 
 @media (min-width: 860px) {
-  .stage {
+  .devices {
     grid-template-columns: auto 90px 1fr;
   }
 }
 
 .caption {
-  grid-column: 1 / -1;
-  max-width: 52ch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-6);
+  align-items: center;
+  justify-content: center;
   text-align: center;
   color: var(--color-muted);
   font-weight: 700;
 }
 
-/* ---------- shared crayon frame ---------- */
+.caption .replay {
+  width: auto;
+  min-height: 44px;
+  padding: var(--space-1) var(--space-6);
+  font-size: 16px;
+}
+
+/* ---------- shared crayon frame (devices are the raised objects: they keep the shadow) ---------- */
 
 .phone,
 .lid {
@@ -102,15 +129,15 @@
 }
 
 .lineA {
-  animation: lineA var(--loop) var(--ease) infinite;
+  animation: lineA var(--loop) var(--ease) 1 both;
 }
 
 .lineB {
-  animation: lineB var(--loop) var(--ease) infinite;
+  animation: lineB var(--loop) var(--ease) 1 both;
 }
 
 .lineC {
-  animation: lineC var(--loop) var(--ease) infinite;
+  animation: lineC var(--loop) var(--ease) 1 both;
 }
 
 @keyframes lineA {
@@ -160,7 +187,7 @@
   text-align: center;
   font-weight: 800;
   font-size: 16px;
-  animation: press var(--loop) var(--ease) infinite;
+  animation: press var(--loop) var(--ease) 1 both;
 }
 
 .button::before {
@@ -194,12 +221,12 @@
   bottom: 74px;
   width: 30px;
   height: 30px;
-  border: 3px solid var(--color-blue-ink);
+  border: 3px solid var(--color-ink);
   border-radius: 50% 45% 52% 48%;
-  background: color-mix(in srgb, var(--color-blue) 35%, transparent);
+  background: color-mix(in srgb, var(--color-yellow) 60%, transparent);
   opacity: 0;
   pointer-events: none;
-  animation: tap var(--loop) var(--ease) infinite;
+  animation: tap var(--loop) var(--ease) 1 both;
 }
 
 @keyframes tap {
@@ -234,7 +261,7 @@
   background: var(--color-paper);
   border-radius: 18px;
   text-align: center;
-  animation: receipt var(--loop) var(--ease) infinite;
+  animation: receipt var(--loop) var(--ease) 1 both;
 }
 
 @keyframes receipt {
@@ -244,13 +271,9 @@
     transform: translateY(14px) scale(0.96);
   }
   48%,
-  92% {
+  100% {
     opacity: 1;
     transform: none;
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(-6px);
   }
 }
 
@@ -269,7 +292,7 @@
   stroke-dasharray: 1;
   stroke-dashoffset: 0;
   filter: url(#wobble);
-  animation: check var(--loop) var(--ease) infinite;
+  animation: check var(--loop) var(--ease) 1 both;
 }
 
 @keyframes check {
@@ -293,7 +316,7 @@
   width: 80px;
   height: 50px;
   transform: rotate(90deg);
-  animation: nudge var(--loop) var(--ease) infinite;
+  animation: nudge var(--loop) var(--ease) 1 both;
 }
 
 @media (min-width: 860px) {
@@ -304,14 +327,17 @@
 
 @keyframes nudge {
   0%,
-  46%,
-  64%,
-  100% {
+  46% {
     translate: 0 0;
-    opacity: 0.55;
+    opacity: 0.45;
   }
   54% {
     translate: 10px 0;
+    opacity: 1;
+  }
+  64%,
+  100% {
+    translate: 0 0;
     opacity: 1;
   }
 }
@@ -356,7 +382,7 @@
 
 .rowNew {
   background: color-mix(in srgb, var(--color-yellow) 45%, transparent);
-  animation: rowNew var(--loop) var(--ease) infinite;
+  animation: rowNew var(--loop) var(--ease) 1 both;
 }
 
 @keyframes rowNew {
@@ -371,14 +397,11 @@
     transform: none;
     background: color-mix(in srgb, var(--color-yellow) 90%, transparent);
   }
-  78%,
-  92% {
+  80%,
+  100% {
     opacity: 1;
     transform: none;
     background: color-mix(in srgb, var(--color-yellow) 45%, transparent);
-  }
-  100% {
-    opacity: 0;
   }
 }
 
@@ -386,4 +409,112 @@
   .row {
     font-size: 12px;
   }
+}
+
+/* ---------- the three steps, lit in sync with the devices ---------- */
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-8);
+}
+
+@media (min-width: 820px) {
+  .steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-6);
+  }
+}
+
+.step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: 14px 6px 16px 8px;
+}
+
+.step1 {
+  animation: step1 var(--loop) var(--ease) 1 both;
+}
+
+.step2 {
+  animation: step2 var(--loop) var(--ease) 1 both;
+}
+
+.step3 {
+  animation: step3 var(--loop) var(--ease) 1 both;
+}
+
+/* the active step gets the yellow highlighter, the others rest on paper */
+@keyframes step1 {
+  0%,
+  24% {
+    background: color-mix(in srgb, var(--color-yellow) 40%, transparent);
+  }
+  30%,
+  100% {
+    background: transparent;
+  }
+}
+
+@keyframes step2 {
+  0%,
+  24% {
+    background: transparent;
+  }
+  30%,
+  46% {
+    background: color-mix(in srgb, var(--color-yellow) 40%, transparent);
+  }
+  52%,
+  100% {
+    background: transparent;
+  }
+}
+
+@keyframes step3 {
+  0%,
+  46% {
+    background: transparent;
+  }
+  52%,
+  90% {
+    background: color-mix(in srgb, var(--color-yellow) 40%, transparent);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.stepArt {
+  position: relative;
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  background: var(--color-paper-2);
+  border: 2px dashed color-mix(in srgb, var(--color-ink) 35%, transparent);
+  border-radius: 14px 6px 16px 8px;
+}
+
+.stepArt svg {
+  width: 100%;
+  height: 110px;
+}
+
+.stepNo {
+  position: absolute;
+  left: -12px;
+  top: -14px;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  font-size: 24px;
+  font-weight: 800;
+  background: var(--color-paper);
+  border: var(--stroke) solid var(--color-ink);
+  border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%;
+  transform: rotate(-6deg);
 }

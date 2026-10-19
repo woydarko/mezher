@@ -30,6 +30,7 @@
 .logo {
   display: inline-flex;
   align-items: center;
+  min-height: 44px;
   gap: var(--space-2);
   font-weight: 800;
   font-size: 26px;
@@ -54,7 +55,10 @@
 
 .navLink {
   position: relative;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 4px 12px;
   color: var(--color-ink);
   text-decoration: none;
   isolation: isolate;
@@ -78,7 +82,7 @@
 }
 
 .navLink[aria-current="page"]::before {
-  border-color: var(--color-orange);
+  border-color: var(--color-ink);
   transform: rotate(-3deg);
 }
 
@@ -90,7 +94,14 @@
     font-size: 15px;
   }
   .navLink {
-    padding: 4px 6px;
+    padding: 4px 8px;
+  }
+  .navRow {
+    gap: var(--space-2);
+  }
+  .logo svg {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -132,11 +143,15 @@
 .footerLinks {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 0;
   font-weight: 700;
 }
 
-.footerLinks a {
+.footerLinks a,
+.footerBottom a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   align-self: flex-start;
   color: var(--color-ink);
   text-decoration: none;
@@ -149,10 +164,8 @@
 }
 
 .footerHeading {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--color-muted);
 }
 
@@ -199,7 +212,6 @@
   background: var(--color-paper);
   border: var(--stroke) solid var(--color-ink);
   border-radius: var(--radius-sketch);
-  box-shadow: var(--shadow-sketch);
   filter: url(#sketch);
 }
 
@@ -485,6 +497,28 @@
   }
 }
 
+/* ---------- Doodle icons ---------- */
+
+.icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+.iconSmall {
+  display: inline-block;
+  flex: none;
+  width: 15px;
+  height: 15px;
+  vertical-align: -2px;
+}
+
+.inlineLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ---------- Misc ---------- */
 
 .srOnly {
@@ -515,7 +549,7 @@
 
 .wallet {
   width: auto;
-  min-height: 42px;
+  min-height: 44px;
   padding: var(--space-1) var(--space-4);
   font-size: 16px;
   white-space: nowrap;

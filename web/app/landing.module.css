@@ -113,15 +113,16 @@
 }
 
 .partBorrow::before {
-  background: repeating-linear-gradient(
-    -58deg,
-    var(--color-paper) 0 9px,
-    color-mix(in srgb, var(--color-orange) 25%, var(--color-paper)) 9px 12px
-  );
+  background: repeating-linear-gradient(-58deg, var(--color-paper) 0 9px, var(--color-paper-2) 9px 12px);
 }
 
+/* the result gets the yellow highlighter; orange is kept for the Pay action and the "Keep" circle */
 .partTotal::before {
-  background: repeating-linear-gradient(-58deg, var(--color-orange) 0 9px, var(--color-orange-soft) 9px 12px);
+  background: repeating-linear-gradient(
+    -58deg,
+    var(--color-yellow) 0 9px,
+    color-mix(in srgb, var(--color-yellow) 55%, var(--color-paper)) 9px 12px
+  );
 }
 
 .amount {
@@ -150,31 +151,18 @@
   transform: rotate(-12deg);
 }
 
-.partStar {
-  position: absolute;
-  right: -20px;
-  top: -22px;
-  width: 44px;
-  height: 44px;
-  transform: rotate(14deg);
-  animation: sway 3.6s ease-in-out infinite;
-}
-
-@keyframes sway {
-  0%,
-  100% {
-    transform: rotate(14deg) scale(1);
-  }
-  50% {
-    transform: rotate(-4deg) scale(1.08);
-  }
-}
-
 .caption {
   margin-top: var(--space-2);
   font-weight: 800;
   font-size: 17px;
   color: var(--color-green-ink);
+}
+
+/* the one text-only band: a quieter rhythm between the demo and the FAQ */
+.sectionSafety {
+  padding: var(--space-12) 0;
+  border-top: 2px dashed color-mix(in srgb, var(--color-ink) 30%, transparent);
+  border-bottom: 2px dashed color-mix(in srgb, var(--color-ink) 30%, transparent);
 }
 
 .section {
@@ -195,52 +183,6 @@
   bottom: -6px;
   width: calc(100% + 12px);
   height: 16px;
-}
-
-.steps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-8);
-}
-
-@media (min-width: 820px) {
-  .steps {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-.stepArt {
-  position: relative;
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  background: color-mix(in srgb, var(--color-yellow) 14%, var(--color-paper-2));
-  border: 2px dashed color-mix(in srgb, var(--color-ink) 35%, transparent);
-  border-radius: 14px 6px 16px 8px;
-}
-
-.stepArt svg {
-  width: 100%;
-  height: 120px;
-}
-
-.stepArt .stepNo {
-  position: absolute;
-  left: -14px;
-  top: -16px;
-}
-
-.stepNo {
-  display: grid;
-  place-items: center;
-  width: 54px;
-  height: 54px;
-  font-size: 30px;
-  font-weight: 800;
-  background: var(--color-yellow);
-  border: var(--stroke) solid var(--color-ink);
-  border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%;
-  transform: rotate(-6deg);
 }
 
 .safety {
@@ -301,6 +243,9 @@
 }
 
 .qa summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
   font-weight: 800;
   font-size: 19px;

@@ -4,31 +4,12 @@ import Link from "next/link";
 import { useState } from "react";
 import { DemoMockup } from "@/components/DemoMockup";
 import { Doodle } from "@/components/Doodle";
-import { Illustration } from "@/components/Illustration";
 import { Reveal } from "@/components/Reveal";
 import styles from "@/components/ui.module.css";
 import { buildLink, randomOrder } from "@/lib/link";
 import l from "./landing.module.css";
 
 const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
-
-const STEPS = [
-  {
-    art: "link",
-    title: "Shop sends a link",
-    body: "The merchant types an amount on Mezher and shares the link. No account, no setup.",
-  },
-  {
-    art: "sign",
-    title: "You sign, that's it",
-    body: "Open the link, see exactly what comes from your balance and what gets borrowed. Sign once or twice.",
-  },
-  {
-    art: "paid",
-    title: "Shop gets paid, you keep your BTC",
-    body: "The merchant receives the full amount in MUSD in one transaction. Your Bitcoin stays locked in your Trove.",
-  },
-] as const;
 
 const SAFETY = [
   {
@@ -52,11 +33,11 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top.",
+    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top. If your balance covers the whole payment, nothing is borrowed and you pay the small network fee yourself.",
   },
   {
     q: "Do I need MUSD in my wallet?",
-    a: "No. Whatever your balance covers is used first; the rest is borrowed. With 0 MUSD the whole payment is borrowed.",
+    a: "No, but you need a Trove on Mezo. Whatever your balance covers is used first; the rest is borrowed. With 0 MUSD the whole payment is borrowed.",
   },
   {
     q: "Is this on mainnet?",
@@ -68,19 +49,14 @@ export default function Home() {
   // Fresh order id per visit so the demo never lands on "Already paid".
   const [demoHref] = useState(() => {
     if (!DEMO_MERCHANT) return "/merchant";
-    const built = buildLink("", {
-      to: DEMO_MERCHANT,
-      amount: "12",
-      order: randomOrder(),
-      label: "Coffee",
-    });
+    const built = buildLink("", { to: DEMO_MERCHANT, amount: "12", order: randomOrder(), label: "Coffee" });
     return built.ok ? built.url : "/merchant";
   });
 
   return (
     <main className="page page-landing">
       <section className={l.hero}>
-        <Reveal className={l.heroText}>
+        <div className={l.heroText}>
           <span className={l.kicker}>Bitcoin-backed checkout on Mezo</span>
           <h1>
             Pay with your Bitcoin.{" "}
@@ -91,9 +67,8 @@ export default function Home() {
             your Bitcoin.
           </h1>
           <p className={l.lead}>
-            Short on MUSD? Mezher borrows only the missing part against your
-            BTC, straight to the merchant, in one transaction. No selling, no
-            gas.
+            Short on MUSD? Mezher borrows only the missing part against your BTC, straight to the merchant, in one
+            transaction. No selling, and no gas for the part you borrow.
           </p>
           <div className={l.ctas}>
             <Link href={demoHref} className={styles.primary}>
@@ -103,114 +78,80 @@ export default function Home() {
               I&apos;m a merchant
             </Link>
           </div>
-        </Reveal>
+        </div>
 
-        <Reveal delayMs={180}>
-          <figure
-            className={l.sketch}
-            aria-label="Example: 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC makes 12 MUSD for the merchant"
-          >
-            <div className={l.part}>
-              <span className={l.amount + " mono"}>5 MUSD</span>
-              <span>from your wallet</span>
-            </div>
-            <span className={l.op} aria-hidden>
-              +
-            </span>
-            <div className={l.part + " " + l.partBorrow}>
-              <Doodle name="coin" className={l.partCoin} />
-              <span className={l.amount + " mono"}>7 MUSD</span>
-              <span>borrowed against your BTC</span>
-            </div>
-            <Doodle name="arrow" className={l.arrow} />
-            <div className={l.part + " " + l.partTotal}>
-              <Doodle name="star" className={l.partStar} />
-              <span className={l.amount + " mono"}>12 MUSD</span>
-              <span>lands with the merchant</span>
-            </div>
-            <figcaption className={l.caption}>
-              Your BTC never leaves your Trove.
-            </figcaption>
-          </figure>
-        </Reveal>
+        <figure
+          className={l.sketch}
+          aria-label="Example: 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC makes 12 MUSD for the merchant"
+        >
+          <div className={l.part}>
+            <span className={l.amount + " mono"}>5 MUSD</span>
+            <span>from your wallet</span>
+          </div>
+          <span className={l.op} aria-hidden>
+            +
+          </span>
+          <div className={l.part + " " + l.partBorrow}>
+            <Doodle name="coin" className={l.partCoin} />
+            <span className={l.amount + " mono"}>7 MUSD</span>
+            <span>borrowed against your BTC</span>
+          </div>
+          <Doodle name="arrow" className={l.arrow} />
+          <div className={l.part + " " + l.partTotal}>
+            <span className={l.amount + " mono"}>12 MUSD</span>
+            <span>lands with the merchant</span>
+          </div>
+          <figcaption className={l.caption}>Your BTC never leaves your Trove.</figcaption>
+        </figure>
       </section>
 
       <section className={l.section} aria-labelledby="watch">
-        <Reveal as="h2" id="watch" className={l.sectionTitle}>
-          Watch a coffee get paid
+        <h2 id="watch" className={l.sectionTitle}>
+          How a payment works
           <Doodle name="underline" className={l.underline} />
-        </Reveal>
+        </h2>
+        {/* The only scroll-triggered reveal besides the final CTA: it is also what starts the demo. */}
         <Reveal>
           <DemoMockup />
         </Reveal>
       </section>
 
-      <section className={l.section} aria-labelledby="how">
-        <Reveal as="h2" id="how" className={l.sectionTitle}>
-          How it works
-          <Doodle name="underline" className={l.underline} />
-        </Reveal>
-        <ol className={l.steps}>
-          {STEPS.map((s, i) => (
-            <Reveal
-              as="li"
-              key={s.title}
-              className={styles.card}
-              delayMs={i * 140}
-            >
-              <div className={l.stepArt}>
-                <Illustration name={s.art} />
-                <span className={l.stepNo} aria-hidden>
-                  {i + 1}
-                </span>
-              </div>
-              <h3>{s.title}</h3>
-              <p>{s.body}</p>
-            </Reveal>
-          ))}
-        </ol>
-      </section>
-
-      <section className={l.section} aria-labelledby="safe">
-        <Reveal as="h2" id="safe" className={l.sectionTitle}>
+      <section className={l.section + " " + l.sectionSafety} aria-labelledby="safe">
+        <h2 id="safe" className={l.sectionTitle}>
           Why it won&apos;t bite you
           <Doodle name="underline" className={l.underline} />
-        </Reveal>
+        </h2>
         <ul className={l.safety}>
-          {SAFETY.map((s, i) => (
-            <Reveal as="li" key={s.title} delayMs={i * 140}>
+          {SAFETY.map((s) => (
+            <li key={s.title}>
               <Doodle name="check" className={l.check} />
               <div>
                 <h3>{s.title}</h3>
                 <p>{s.body}</p>
               </div>
-            </Reveal>
+            </li>
           ))}
         </ul>
       </section>
 
       <section className={l.section} aria-labelledby="faq">
-        <Reveal as="h2" id="faq" className={l.sectionTitle}>
+        <h2 id="faq" className={l.sectionTitle}>
           Questions people ask
           <Doodle name="underline" className={l.underline} />
-        </Reveal>
+        </h2>
         <div className={l.faq}>
-          {FAQ.map((f, i) => (
-            <Reveal key={f.q} delayMs={i * 90}>
-              <details className={l.qa}>
-                <summary>{f.q}</summary>
-                <p>{f.a}</p>
-              </details>
-            </Reveal>
+          {FAQ.map((f) => (
+            <details key={f.q} className={l.qa}>
+              <summary>{f.q}</summary>
+              <p>{f.a}</p>
+            </details>
           ))}
         </div>
       </section>
 
       <Reveal as="section" className={styles.card + " " + l.final}>
-        <h2>Got a Trove? Pay something in 30 seconds.</h2>
-        <p>
-          Connect a wallet on Mezo testnet and run the 12 MUSD coffee checkout.
-        </p>
+        <h2>Got a Trove? Pay for a test coffee.</h2>
+        <p>Connect a wallet on Mezo testnet and run the 12 MUSD coffee checkout.</p>
         <Link href={demoHref} className={styles.primary + " " + l.finalCta}>
           Try the Demo
         </Link>
