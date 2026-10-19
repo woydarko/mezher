@@ -152,17 +152,16 @@
   width: 44px;
   height: 44px;
   transform: rotate(14deg);
-  animation: pop 2.4s var(--ease-bounce) infinite;
+  animation: sway 3.6s ease-in-out infinite;
 }
 
-@keyframes pop {
+@keyframes sway {
   0%,
-  80%,
   100% {
     transform: rotate(14deg) scale(1);
   }
-  88% {
-    transform: rotate(-6deg) scale(1.2);
+  50% {
+    transform: rotate(-4deg) scale(1.08);
   }
 }
 
