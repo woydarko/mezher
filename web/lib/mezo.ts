@@ -67,6 +67,18 @@ export const borrowerOperationsAbi = [
     inputs: [{ name: "_debt", type: "uint256" }],
     outputs: [{ type: "uint256" }],
   },
+  {
+    // collateral is native BTC sent as msg.value; proven in contracts/test/MezherPay.fork.t.sol setUp
+    type: "function",
+    name: "openTrove",
+    stateMutability: "payable",
+    inputs: [
+      { name: "_debtAmount", type: "uint256" },
+      { name: "_upperHint", type: "address" },
+      { name: "_lowerHint", type: "address" },
+    ],
+    outputs: [],
+  },
 ] as const;
 
 export const troveManagerAbi = [

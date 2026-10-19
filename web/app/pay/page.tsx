@@ -16,6 +16,7 @@ import {
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
+import { OpenTroveCard } from "@/components/OpenTroveCard";
 import { WalletButton } from "@/components/WalletButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RatioMeter } from "@/components/RatioMeter";
@@ -443,11 +444,13 @@ function CheckoutFor({ link }: { link: PayLink }) {
             </Card>
           )}
 
-          {q?.state === "needs_trove" && (
-            <Card title="Your Bitcoin credit">
-              <p>Your MUSD balance is {formatMusd(q.shortfallWei)} MUSD short and you have no Trove to borrow from.</p>
-              <SecondaryButton href={OPEN_TROVE_URL}>Open a Trove on Mezo</SecondaryButton>
-            </Card>
+          {q?.state === "needs_trove" && address && priceE18 !== undefined && (
+            <OpenTroveCard
+              payer={address}
+              shortfallWei={q.shortfallWei}
+              priceE18={priceE18}
+              onOpened={() => reads.refetch()}
+            />
           )}
 
           {q && q.state !== "needs_trove" && trove?.status === 1 && priceE18 !== undefined && (
