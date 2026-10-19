@@ -15,23 +15,6 @@
   --color-blue: #7fa8ff;
   --color-blue-ink: #1e4fd8;
 
-  /* MS Paint default palette, decorative only (footer strip). */
-  --paint-1: #000000;
-  --paint-2: #808080;
-  --paint-3: #800000;
-  --paint-4: #808000;
-  --paint-5: #008000;
-  --paint-6: #008080;
-  --paint-7: #000080;
-  --paint-8: #800080;
-  --paint-9: #ffffff;
-  --paint-10: #c0c0c0;
-  --paint-11: #ff0000;
-  --paint-12: #ffff00;
-  --paint-13: #00ff00;
-  --paint-14: #00ffff;
-  --paint-15: #0000ff;
-  --paint-16: #ff00ff;
 
   /* Legacy names still used by a few components. */
   --color-text: var(--color-ink);
@@ -55,6 +38,7 @@
   --radius-sketch: 255px 18px 225px 18px / 18px 225px 18px 255px;
   --radius-sketch-2: 18px 225px 18px 255px / 255px 18px 225px 18px;
   --stroke: 3px;
+  --header-h: 66px;
   --shadow-sketch: 4px 5px 0 var(--color-ink);
 
   --dur-fast: 180ms;
@@ -80,7 +64,11 @@ body {
 }
 
 body {
+  /* full frame: header, page, footer; the page grows so the footer sits at the bottom */
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--color-paper);
   /* faint sketchbook ruling */
   background-image: repeating-linear-gradient(
@@ -166,6 +154,10 @@ a {
 }
 
 .page {
+  flex: 1 0 auto;
+  /* each page fills the screen under the header; the footer starts below the fold */
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100dvh - var(--header-h));
   width: 100%;
   max-width: 520px;
   margin: 0 auto;
@@ -173,6 +165,10 @@ a {
   display: flex;
   flex-direction: column;
   gap: var(--space-8);
+}
+
+.page-center {
+  justify-content: center;
 }
 
 .page-wide {

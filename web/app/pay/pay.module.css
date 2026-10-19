@@ -48,6 +48,18 @@
   }
 }
 
+.pasteCoin {
+  width: 56px;
+  height: 56px;
+  transform: rotate(-10deg);
+}
+
+.pasteForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
 .paidAmount {
   text-align: center;
   margin: 0 auto;

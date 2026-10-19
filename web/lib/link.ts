@@ -58,6 +58,14 @@ export function buildLink(
   return { ok: true, url: origin + "/pay?" + params.toString() };
 }
 
+/** Query string of a pasted link (full URL, "/pay?…", "?…" or bare "to=…"), or null unless it is a valid link. */
+export function linkQuery(input: string): string | null {
+  const text = input.trim();
+  const query = (text.includes("?") ? text.slice(text.indexOf("?") + 1) : text).split("#")[0] ?? "";
+  const params = new URLSearchParams(query);
+  return parseLink(params).ok ? params.toString() : null;
+}
+
 export function randomOrder(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");

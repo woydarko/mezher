@@ -3,17 +3,9 @@ import { ADDRESSES, explorerAddress } from "@/lib/mezo";
 import { Doodle } from "./Doodle";
 import styles from "./ui.module.css";
 
-const SWATCHES = Array.from({ length: 16 }, (_, i) => "var(--paint-" + (i + 1) + ")");
-
 export function Footer() {
   return (
     <footer className={styles.footer}>
-      {/* MS Paint colour box, decorative */}
-      <div className={styles.palette} aria-hidden>
-        {SWATCHES.map((c) => (
-          <span key={c} className={styles.swatch} style={{ background: c }} />
-        ))}
-      </div>
       <div className={styles.footerGrid}>
         <div className={styles.footerBrand}>
           <Link href="/" className={styles.logo} aria-label="Mezher home">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Doodle } from "@/components/Doodle";
+import { Illustration } from "@/components/Illustration";
 import { Reveal } from "@/components/Reveal";
 import styles from "@/components/ui.module.css";
 import { buildLink, randomOrder } from "@/lib/link";
@@ -12,18 +13,21 @@ const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
 
 const STEPS = [
   {
+    art: "link",
     title: "Shop sends a link",
     body: "The merchant types an amount on Mezher and shares the link. No account, no setup.",
   },
   {
+    art: "sign",
     title: "You sign, that's it",
     body: "Open the link, see exactly what comes from your balance and what gets borrowed. Sign once or twice.",
   },
   {
+    art: "paid",
     title: "Shop gets paid, you keep your BTC",
     body: "The merchant receives the full amount in MUSD in one transaction. Your Bitcoin stays locked in your Trove.",
   },
-];
+] as const;
 
 const SAFETY = [
   {
@@ -143,9 +147,12 @@ export default function Home() {
               className={styles.card}
               delayMs={i * 140}
             >
-              <span className={l.stepNo} aria-hidden>
-                {i + 1}
-              </span>
+              <div className={l.stepArt}>
+                <Illustration name={s.art} />
+                <span className={l.stepNo} aria-hidden>
+                  {i + 1}
+                </span>
+              </div>
               <h3>{s.title}</h3>
               <p>{s.body}</p>
             </Reveal>

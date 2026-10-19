@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildLink, parseLink, randomOrder } from "@/lib/link";
+import { buildLink, linkQuery, parseLink, randomOrder } from "@/lib/link";
 
 const ORIGIN = "https://mezher.example";
 const TO = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -93,5 +93,21 @@ describe("buildLink + parseLink", () => {
 describe("randomOrder", () => {
   it("returns 16 lowercase hex chars", () => {
     expect(randomOrder()).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("linkQuery", () => {
+  const query = "to=" + TO + "&amount=12&order=" + ORDER;
+
+  it("accepts a full pasted URL, a /pay path and a bare query", () => {
+    for (const input of [ORIGIN + "/pay?" + query, "  /pay?" + query + "  ", "?" + query, query]) {
+      expect(new URLSearchParams(linkQuery(input) ?? "").get("order")).toBe(ORDER);
+    }
+  });
+
+  it("rejects text that is not a valid payment link", () => {
+    for (const input of ["", "hello", ORIGIN + "/pay?to=" + TO + "&amount=12", ORDER]) {
+      expect(linkQuery(input)).toBeNull();
+    }
   });
 });

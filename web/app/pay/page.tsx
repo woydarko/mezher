@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { BaseError, ContractFunctionRevertedError, zeroAddress, type Address, type Hex } from "viem";
 import {
@@ -15,6 +15,7 @@ import {
 } from "wagmi";
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
+import { Field } from "@/components/Field";
 import { WalletButton } from "@/components/WalletButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RatioMeter } from "@/components/RatioMeter";
@@ -24,7 +25,7 @@ import { StatusLine } from "@/components/StatusLine";
 import { checkoutReducer, type BorrowSig, type PermitSig } from "@/lib/checkout";
 import { formatMusd, formatRatio } from "@/lib/format";
 import { getBorrowHints } from "@/lib/hints";
-import { parseLink, type PayLink } from "@/lib/link";
+import { linkQuery, parseLink, type PayLink } from "@/lib/link";
 import {
   ADDRESSES,
   MEZHER_PAY_DEPLOY_BLOCK,
@@ -76,16 +77,63 @@ function Checkout() {
   const params = useSearchParams();
   const parsed = useMemo(() => parseLink(new URLSearchParams(params.toString())), [params]);
   if (!parsed.ok) {
+    const empty = !params.has("to") && !params.has("amount") && !params.has("order");
     return (
-      <main className="page">
-        <Card>
-          <h1>This payment link is incomplete</h1>
-          <p className="section-label">Ask the merchant for a new link.</p>
-        </Card>
+      <main className="page page-center">
+        <PasteLink incomplete={!empty} />
       </main>
     );
   }
   return <CheckoutFor link={parsed.link} />;
+}
+
+/** /pay without a valid link: paste one. Unpaid orders exist only inside their link, so an id alone can't be looked up. */
+function PasteLink({ incomplete }: { incomplete: boolean }) {
+  const router = useRouter();
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string>();
+
+  function open() {
+    const query = linkQuery(value);
+    if (!query) {
+      setError("That isn't a full Mezher payment link. It needs to=, amount= and order=.");
+      return;
+    }
+    router.push("/pay?" + query);
+  }
+
+  return (
+    <Card>
+      <Doodle name="coin" className={p.pasteCoin} />
+      <h1>{incomplete ? "This payment link is incomplete" : "Pay a link"}</h1>
+      <p>
+        {incomplete
+          ? "Something in it is missing or mistyped. Paste the link again, or ask the shop for a new one."
+          : "Got a payment link from a shop? Paste it here to see exactly what you'd pay."}
+      </p>
+      <form
+        className={p.pasteForm}
+        onSubmit={(e) => {
+          e.preventDefault();
+          open();
+        }}
+      >
+        <Field
+          label="Payment link"
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setError(undefined);
+          }}
+          placeholder="https://…/pay?to=0x…&amount=12&order=…"
+          error={error}
+          spellCheck={false}
+          autoComplete="off"
+        />
+        <PrimaryButton onClick={open}>Open payment</PrimaryButton>
+      </form>
+    </Card>
+  );
 }
 
 function OrderCard({ link }: { link: PayLink }) {
@@ -293,7 +341,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
   if (state.step === "paid" || state.step === "confirming") {
     const icrNow = trove?.status === 1 && priceE18 !== undefined ? icrE18(trove.collWei, priceE18, trove.debtWei) : null;
     return (
-      <main className="page">
+      <main className="page page-center">
         <Card>
           {state.step === "paid" && (
             <div className={p.celebrate} aria-hidden>
@@ -332,7 +380,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
 
   if (alreadyPaid) {
     return (
-      <main className="page">
+      <main className="page page-center">
         <OrderCard link={link} />
         <Card>
           <StatusLine tone="success" href={explorerTx(alreadyPaid.txHash)}>
@@ -354,7 +402,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
   const onMezo = isConnected && chainId === MEZO_TESTNET.id;
 
   return (
-    <main className="page">
+    <main className="page page-center">
       <OrderCard link={link} />
 
       {!isConnected && (
