@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://mezher.vercel.app"><b>Live app</b></a> ·
   <a href="https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract">Contract (verified)</a> ·
-  <a href="https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5">Live payment on testnet</a> ·
+  <a href="https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0">Live payment on testnet</a> ·
   <a href="#getting-started">Run it</a> ·
   <a href="#integrate">Integrate</a> ·
   <a href="#safety">Safety</a>
@@ -90,7 +90,7 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 | BorrowerOperations | `0xCdF7028ceAB81fA0C6971208e83fa7872994beE5` |
 | TroveManager | `0xE47c80e8c23f6B4A1aE41c34837a0599D5D16bb0` |
 
-Reference payment: [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5), 11 MUSD borrowed from the payer's Trove straight to the merchant, sent by the relayer.
+Reference payments, both sent by the relayer with the borrowed part going straight to the merchant: [`0x51e6aaf5…`](https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0) (13 MUSD, made on [mezher.vercel.app](https://mezher.vercel.app)) and [`0xdb3bc15e…`](https://explorer.test.mezo.org/tx/0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5) (11 MUSD, local run).
 
 ## Integrate
 
