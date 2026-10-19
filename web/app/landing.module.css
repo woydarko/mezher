@@ -160,9 +160,35 @@
 
 /* the one text-only band: a quieter rhythm between the demo and the FAQ */
 .sectionSafety {
+  position: relative;
   padding: var(--space-12) 0;
-  border-top: 2px dashed color-mix(in srgb, var(--color-ink) 30%, transparent);
-  border-bottom: 2px dashed color-mix(in srgb, var(--color-ink) 30%, transparent);
+}
+
+/* two straight crayon strokes instead of rules: the #sketch filter roughens the edges and adds grain */
+.sectionSafety::before,
+.sectionSafety::after {
+  content: "";
+  position: absolute;
+  left: -1%;
+  right: -2%;
+  height: 6px;
+  background: var(--color-muted);
+  border-radius: 3px 7px 2px 6px / 4px 2px 5px 3px;
+  filter: url(#sketch);
+  opacity: 0.75;
+}
+
+.sectionSafety::before {
+  top: 0;
+  transform: rotate(-0.35deg);
+}
+
+.sectionSafety::after {
+  bottom: 0;
+  left: 1%;
+  right: -1%;
+  height: 5px;
+  transform: rotate(0.25deg);
 }
 
 .section {
@@ -225,6 +251,23 @@
   position: relative;
   isolation: isolate;
   padding: var(--space-3) var(--space-4);
+  /* lets the answer animate to height: auto (Chromium); other browsers open instantly */
+  interpolate-size: allow-keywords;
+}
+
+.qa::details-content {
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    height var(--dur-base) var(--ease),
+    opacity var(--dur-base) var(--ease),
+    content-visibility var(--dur-base) allow-discrete;
+}
+
+.qa[open]::details-content {
+  height: auto;
+  opacity: 1;
 }
 
 .qa::before {
@@ -236,6 +279,10 @@
   border-radius: var(--radius-sketch-2);
   background: var(--color-paper);
   filter: url(#sketch);
+}
+
+.qa::before {
+  transition: background var(--dur-base) var(--ease);
 }
 
 .qa[open]::before {
@@ -262,7 +309,7 @@
   width: 1.2em;
   font-weight: 800;
   color: var(--color-orange-ink);
-  transition: transform var(--dur-fast) var(--ease);
+  transition: transform var(--dur-base) var(--ease);
 }
 
 .qa[open] summary::before {
