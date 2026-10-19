@@ -1,0 +1,2 @@
+# third-party code vendored for Foundry; keep it out of GitHub language stats
+contracts/lib/** linguist-vendored
