@@ -17,19 +17,28 @@ type LogClient = { getLogs: PublicClient["getLogs"]; getBlockNumber(): Promise<b
 const CHUNK = 10_000n; // RPC log-range limit per call
 const PAID_EVENT = getAbiItem({ abi: mezherPayAbi, name: "Paid" });
 
-/** Paid events for `merchant` (and `orderId` when given) from `fromBlock` to head, newest first. */
+/**
+ * Paid events from `fromBlock` to head, newest first, filtered on the indexed topics given
+ * (merchant, payer, orderId); no filter reads every payment.
+ */
 export async function fetchPaidLogs(
   client: LogClient,
-  a: { merchant: Address; orderId?: Hex; fromBlock: bigint },
+  a: { merchant?: Address; payer?: Address; orderId?: Hex; fromBlock: bigint },
 ): Promise<PaidLog[]> {
   const head = await client.getBlockNumber();
+  const filter = {
+    ...(a.merchant ? { merchant: a.merchant } : {}),
+    ...(a.orderId ? { orderId: a.orderId } : {}),
+    ...(a.payer ? { payer: a.payer } : {}),
+  };
+  const args = Object.keys(filter).length > 0 ? filter : undefined;
   const out: PaidLog[] = [];
   for (let from = a.fromBlock; from <= head; from += CHUNK) {
     const to = from + CHUNK - 1n < head ? from + CHUNK - 1n : head;
     const logs = await client.getLogs({
       address: ADDRESSES.mezherPay,
       event: PAID_EVENT,
-      args: a.orderId ? { merchant: a.merchant, orderId: a.orderId } : { merchant: a.merchant },
+      args,
       fromBlock: from,
       toBlock: to,
     });
@@ -47,6 +56,18 @@ export async function fetchPaidLogs(
     }
   }
   return out.sort((x, y) => (x.blockNumber === y.blockNumber ? 0 : x.blockNumber > y.blockNumber ? -1 : 1));
+}
+
+type BlockClient = { getBlock(a: { blockNumber: bigint }): Promise<{ timestamp: bigint }> };
+
+/** Unix seconds for each distinct block (Paid logs carry block numbers, the charts need days). */
+export async function fetchBlockTimes(client: BlockClient, blocks: bigint[]): Promise<Map<bigint, number>> {
+  const out = new Map<bigint, number>();
+  for (const blockNumber of new Set(blocks)) {
+    const block = await client.getBlock({ blockNumber });
+    out.set(blockNumber, Number(block.timestamp));
+  }
+  return out;
 }
 
 /** Only a payment of at least the requested amount marks the order paid, so a 1-wei payment cannot. */
