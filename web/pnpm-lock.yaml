@@ -20,6 +20,9 @@ importers:
       next:
         specifier: 14.2.35
         version: 14.2.35(@babel/core@7.29.7(supports-color@7.2.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      qrcode:
+        specifier: 1.5.3
+        version: 1.5.3
       react:
         specifier: ^18
         version: 18.3.1
@@ -39,6 +42,9 @@ importers:
       '@types/node':
         specifier: ^20
         version: 20.19.43
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
       '@types/react':
         specifier: ^18
         version: 18.3.31
@@ -1924,6 +1930,9 @@ packages:
 
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
+
+  '@types/qrcode@1.5.6':
+    resolution: {integrity: sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==}
 
   '@types/react-dom@18.3.7':
     resolution: {integrity: sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==}
@@ -8954,6 +8963,10 @@ snapshots:
       '@types/node': 20.19.43
 
   '@types/prop-types@15.7.15': {}
+
+  '@types/qrcode@1.5.6':
+    dependencies:
+      '@types/node': 20.19.43
 
   '@types/react-dom@18.3.7(@types/react@18.3.31)':
     dependencies:

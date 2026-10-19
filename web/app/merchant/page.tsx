@@ -7,6 +7,7 @@ import { useAccount, usePublicClient } from "wagmi";
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
+import { LinkQr } from "@/components/LinkQr";
 import { PaymentsTable } from "@/components/PaymentsTable";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -126,6 +127,7 @@ export default function MerchantPage() {
             </div>
           </div>
         )}
+        {url && <LinkQr url={url} />}
         {url && copyFailed && (
           <StatusLine tone="error">Your browser blocked copying. Select the link above and copy it.</StatusLine>
         )}

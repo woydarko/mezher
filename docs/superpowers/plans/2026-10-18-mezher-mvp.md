@@ -300,7 +300,7 @@ web/
 
 ### Stretch tasks (auto-cut if behind; only after Task 11, in this order)
 
-- **S-03 QR code:** `web/components/LinkQr.tsx` renders the `/pay` URL (dependency `qrcode`, with a one-line justification in the commit). Test: renders an `svg` for a valid URL. Commit `feat(web): QR for payment links`.
+- [x] **S-03 QR code:** (done 2026-10-19, `web/lib/qr.ts` + `web/components/LinkQr.tsx`, 3 tests) `web/components/LinkQr.tsx` renders the `/pay` URL (dependency `qrcode`, with a one-line justification in the commit). Test: renders an `svg` for a valid URL. Commit `feat(web): QR for payment links`.
 - **S-02 In-app Trove opening:** `openTroveWithSignature` on the no-Trove state (debt ≥ 1,800 MUSD, hints from `getBorrowHints`). vitest for the typed data of `OpenTrove(uint256 assetAmount,uint256 debtAmount,address borrower,address recipient,uint256 nonce,uint256 deadline)` and a manual testnet run.
 - **S-01 x402 borrow-to-pay:** a demo x402 seller (`@x402/express`, price `"$0.01"`, network `eip155:31611`) and a buyer flow that borrows the gap to the buyer's own wallet via `withdrawMUSDWithSignature(recipient = buyer)` and then pays with `@x402/fetch`. Write its own mini-plan before starting.
 - **S-04 Telegram ping:** needs persistence; write a DATABASE.md section first.
