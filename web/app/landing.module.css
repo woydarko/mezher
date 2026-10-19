@@ -23,16 +23,6 @@
   max-width: 860px;
 }
 
-.kicker {
-  padding: 2px 12px;
-  border: 2px solid var(--color-ink);
-  border-radius: var(--radius-sketch);
-  background: var(--color-yellow);
-  font-weight: 800;
-  font-size: 15px;
-  transform: rotate(-2deg);
-}
-
 .circled {
   position: relative;
   display: inline-block;

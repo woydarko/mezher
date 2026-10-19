@@ -59,7 +59,6 @@ export default function Home() {
     <main className="page page-landing">
       <section className={l.hero}>
         <div className={l.heroText}>
-          <span className={l.kicker}>Bitcoin-backed checkout on Mezo</span>
           <h1>
             Pay with your Bitcoin.{" "}
             <span className={l.circled}>
