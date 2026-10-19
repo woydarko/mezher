@@ -36,7 +36,7 @@ Our contracts:
 | Admin / owner | None — `MezherPay` has no owner or admin functions | n/a |
 | Relayer | 0x8a61973a5a76e598955a52210d34fbddc2aeaca6 (0.03 test BTC on 2026-10-19) | Vercel server env `RELAYER_PRIVATE_KEY` (burner, ≤ 0.01 test BTC float) |
 | Demo payer wallet | 0xe8167000c65634db91131c73c4221b361053786e (2026-10-19: Trove active, coll 0.05 BTC, debt 2,001.8 MUSD, ICR 202%, wallet 5 MUSD) | MetaMask on the demo laptop |
-| Demo merchant wallet | TBD | Second browser profile |
+| Demo merchant wallet | 0x04911751a39a3364474a6d068584268aef5911aa (fresh, 0 MUSD on 2026-10-19) | Second browser profile |
 
 ## Demo state
 - Pre-funded wallets: TBD — record test BTC / MUSD balances and the demo payer's Trove (collateral, debt, ICR) within the last hour before recording and submitting.
