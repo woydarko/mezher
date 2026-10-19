@@ -81,6 +81,7 @@ Over-budget warnings sent: none
 | Time | Time left | Core done / total | Cut decision |
 | --- | --- | --- | --- |
 | 2026-10-18 00:15 +0700 | 211.75 h | 0 / TBD | none |
+| 2026-10-19 15:10 +0700 | — | Golden path proven on testnet: relayed gasless payment tx 0xeed3ffba…, merchant list + "Already paid" verified; Tasks 1–10 done; next: final review, then Task 11 (needs owner OK) | none |
 | 2026-10-18 02:15 +0700 | ~209.75 h | Tasks 1–10 code + tests done (Tasks 3, 9, 10 wait on the testnet deploy for their manual/on-chain steps); Task 11 needs owner OK | none |
 
 ## Unresolved
