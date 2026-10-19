@@ -27,7 +27,7 @@ Implemented once as CSS variables in `web/app/globals.css`; components only cons
 | numbers | Shantell Sans 700, INFM 0, `tabular-nums` (`.mono`) | amounts, addresses, ratios | same hand, steadier, digits aligned |
 | radius.sketch | `255px 18px 225px 18px / 18px 225px 18px 255px` (+ mirrored) | cards, buttons, inputs | uneven radii read as a crayon loop |
 | stroke | 3px | outlines | crayon line weight |
-| shadow.sketch | `4px 5px 0 ink` | primary button, hero sum, demo devices only | only things you press or the hero drawings are raised |
+| shadow.sketch | `4px 5px 0 ink` | primary button, hero sum, demo devices, the three demo step cards | only things you press, the hero drawings, and the step cards (owner preferred that look) are raised |
 | motion | `--ease: cubic-bezier(.22,1,.36,1)`, 180 / 320 / 700 / 800 ms | all transitions | fast start, soft landing |
 | background | faint blue ruling every 32px | page | sketchbook paper, the one texture |
 
@@ -191,3 +191,4 @@ UI library: **none besides RainbowKit** (required by Mezo Passport). Plain CSS m
 | 2026-10-19 | Demo plays once + Replay, reveal only on demo and closing CTA | No endless motion (WCAG 2.2.2), no template fade-up on every section (antislop R-19) |
 | 2026-10-19 | "How it works" folded into the demo as synced steps | Same story was told twice (antislop C-3) |
 | 2026-10-19 | Logo: crayon BTC coin; favicon crayon coin with "M" | Drawn by Claude, approved by the owner ("nice banget", audit approval) |
+| 2026-10-19 | Demo step cards back to the crayon card look (outline, tilt, shadow, yellow number), fill lights in sync | Owner preferred the earlier card design but liked the link to the illustrations (antislop R-12 override noted) |
