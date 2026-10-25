@@ -14,7 +14,8 @@
   <a href="https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0">Live payment on testnet</a> ·
   <a href="#getting-started">Run it</a> ·
   <a href="#integrate">Integrate</a> ·
-  <a href="#safety">Safety</a>
+  <a href="#safety">Safety</a> ·
+  <a href="docs/evidence.md">Evidence</a>
 </p>
 
 ---
@@ -35,6 +36,8 @@
 ## Why Mezher
 
 People who hold Bitcoin on Mezo can borrow MUSD against it, but spending that credit at a shop still takes several steps: borrow to your wallet, wait, then send a payment, and pay gas each time. The easy path is to sell BTC instead, which is exactly what a Bitcoin holder wants to avoid.
+
+It shows on chain. Of the 29.5M MUSD on Mezo mainnet, almost all sits in protocol contracts (Stability Pool, strategies, pools, bridge); users have borrowed 14.5k MUSD through Troves ([numbers and script](docs/evidence.md#why-it-matters-mezo-mainnet-numbers)). A loan is worth opening when there is somewhere to spend it.
 
 Mezher turns it into one checkout:
 
@@ -77,7 +80,7 @@ Enforced on-chain by [`MezherPay.sol`](contracts/src/MezherPay.sol):
 - **Balance-only payments come from the payer.** When nothing is borrowed, the MUSD permit names no merchant, so `pay()` requires the payer to send it (`BalanceOnlyNeedsPayer`).
 - **No owner, no upgrades, no custody.** The contract holds no funds between calls.
 
-The relay endpoint ([`web/lib/relay.ts`](web/lib/relay.ts)) validates every request, rate-limits per payer and IP, de-duplicates orders, simulates before sending, and never logs signatures. Known risks are listed under [Status and roadmap](#status-and-roadmap).
+The relay endpoint ([`web/lib/relay.ts`](web/lib/relay.ts)) validates every request, rate-limits per payer and IP, de-duplicates orders, simulates before sending, and never logs signatures. Known risks are listed under [Status and roadmap](#status-and-roadmap); the Slither results and one known issue are in [docs/SECURITY.md](docs/SECURITY.md).
 
 ## Deployments
 
@@ -95,7 +98,14 @@ Reference payments, both sent by the relayer with the borrowed part going straig
 
 ## Integrate
 
-`MezherPay` is a public building block: any wallet, app or protocol can submit a payment with the payer's signatures.
+**On a website, no code:** create a link on `/merchant` and copy the "Add it to your site" snippet. One tag renders a "Pay with Bitcoin" button that opens the checkout in a new tab:
+
+```html
+<script src="https://mezher.vercel.app/embed.js"
+        data-to="0xYourAddress" data-amount="12" data-order="3f9a1c0d2b4e5f60" data-label="Coffee" async></script>
+```
+
+**On chain:** `MezherPay` is a public building block: any wallet, app or protocol can submit a payment with the payer's signatures.
 
 ```solidity
 struct Payment   { address payer; address merchant; uint256 amount; uint256 fromBalance; bytes32 orderId; }
@@ -145,8 +155,9 @@ To pay, use a wallet on Mezo testnet: get test BTC from the [faucet](https://fau
 | Suite | Command | Covers |
 | --- | --- | --- |
 | Contract unit (17) | `cd contracts && forge test --match-contract MezherPayTest` | Split, permit front-run, signature checks, ICR floor, redirect attempts |
+| Contract invariants (6) | `cd contracts && forge test --match-path test/MezherPay.invariant.t.sol` | 128,000 random calls per invariant: honest splits, ratio moves around 150%, redirect attempts; no funds held, exact amounts, no borrow under 150% |
 | Contract fork (4) | `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol` | The real Mezo contracts on a testnet fork: 5 + 7 split, replay, ICR floor, redirect |
-| Web unit (87) | `cd web && pnpm vitest run` | Link parsing, quote and ratio, Trove opening, signatures, hints, relay, checkout state, payment logs, dashboard stats, QR |
+| Web unit (92) | `cd web && pnpm vitest run` | Link parsing, quote and ratio, Trove opening, signatures, hints, relay, checkout state, payment logs, dashboard stats, QR, embed button |
 | Build | `cd web && pnpm build` | Type check and production build |
 
 Mezo's price oracle is a native precompile that Foundry's EVM does not have, so the fork tests pin `PriceFeed.fetchPrice()` to the live price. Every other contract in those tests is the real one.
@@ -156,13 +167,17 @@ Mezo's price oracle is a native precompile that Foundry's EVM does not have, so 
 ```
 contracts/
   src/MezherPay.sol        the product contract
-  test/                    unit tests (mocks) and fork tests (real Mezo testnet)
+  test/                    unit, invariant (mocks) and fork tests (real Mezo testnet)
   script/Deploy.s.sol      deployment script
 web/
   app/                     Next.js pages: / landing, /pay checkout, /merchant, /dashboard, /terms, /api/relay
   components/              crayon UI components
   lib/                     link, quote, Trove, signatures, hints, relay, payment logs (all unit tested)
-docs/assets/               README illustrations
+  scripts/mezo-stats.mjs   read-only Mezo mainnet MUSD numbers
+docs/
+  evidence.md              every claim with a link or a command
+  SECURITY.md              properties, Slither results, known issue
+  assets/                  README illustrations
 ```
 
 **Stack:** Solidity 0.8.28 (EVM london), Foundry, OpenZeppelin 5 · Next.js 14, React 18, viem, wagmi, RainbowKit with Mezo Passport · vitest.

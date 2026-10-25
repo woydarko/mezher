@@ -11,6 +11,8 @@ broadcast/*/31611/run-latest.json
 *.md
 !README.md
 !contracts/lib/**/*.md
+!docs/evidence.md
+!docs/SECURITY.md
 anti-slop/
 
 # submission material (gallery, deck exports) stays local
