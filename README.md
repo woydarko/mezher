@@ -9,6 +9,7 @@
 
 <p align="center">
   <a href="https://mezher.vercel.app"><b>Live app</b></a> ·
+  <a href="https://www.youtube.com/watch?v=Y6cAobzL7g8">Demo video</a> ·
   <a href="https://drive.google.com/file/d/1n_nNus2p2HWk6ShxbhdL81uJr6z7KvDw/view?usp=sharing">Pitch deck</a> ·
   <a href="https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract">Contract (verified)</a> ·
   <a href="https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0">Live payment on testnet</a> ·
@@ -184,15 +185,17 @@ docs/
 
 ## Status and roadmap
 
-**Now (Wave 1):** working on Mezo testnet, end to end: payment links with QR, gasless borrow-to-pay checkout, in-app Trove opening, and a dashboard for merchants and payers built from on-chain data.
+**Now (Wave 1):** working on Mezo testnet, end to end: payment links with QR, an embeddable "Pay with Bitcoin" button, gasless borrow-to-pay checkout, in-app Trove opening, and a dashboard for merchants and payers built from on-chain data.
 
 **Known limits**
-- Testnet only. MezherPay has had an AI-assisted security review, not a professional audit.
+- Testnet only. MezherPay has had an AI-assisted security review, an invariant suite and a Slither run, not a professional audit.
+- A leftover MUSD allowance can be added to a later borrow-to-pay from the same payer, in a narrow front-run case; details and the planned fix in [docs/SECURITY.md](docs/SECURITY.md#known-issue-leftover-allowance).
 - Opening a Trove from the checkout is unit tested and checked against testnet with `eth_call`; it has not yet been run end to end from the UI.
 - The relay keeps its rate limit in memory per server instance.
 - Unpaid orders live only inside their link; there is no database yet.
 
 **Next**
+- One redeploy for a small merchant fee (the business model) and a signed Mezher order that binds payer, merchant, amount and split, closing the allowance issue.
 - Order lookup and merchant notifications (needs a small database).
 - Pay for APIs and agents over x402 with borrowed MUSD.
 - A professional audit before any mainnet deployment.
