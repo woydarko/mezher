@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import s from "./scenery.module.css";
 
 const INK = "var(--color-ink)";
 
@@ -16,6 +17,7 @@ const shape = (fill: string, w = 4): CSSProperties => ({ ...stroke(w), fill });
  * Sky pieces sit at the far left and right so the centred headline stays on plain paper.
  * Decorative only; it scales to the width and stays anchored to the bottom of the hero.
  * The big shapes (hills, clouds, path) carry no SVG filter: a turbulence filter at full width froze the renderer.
+ * The small filtered pieces "boil" like a pencil animation: scenery.module.css cycles them through the boil-* filters.
  */
 export function HeroScenery({ className }: { className?: string }) {
   return (
@@ -33,19 +35,34 @@ export function HeroScenery({ className }: { className?: string }) {
           <rect width="10" height="10" style={{ fill: "var(--color-orange)" }} />
           <rect x="7.5" width="2.5" height="10" style={{ fill: "var(--color-orange-soft)" }} />
         </pattern>
+        {[0, 1, 2].map((i) => (
+          <g key={i}>
+            <filter id={`boil-sketch-${i}`} x="-5%" y="-5%" width="110%" height="110%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="2" seed={4 + i * 10} result="warp" />
+              <feDisplacementMap in="SourceGraphic" in2="warp" scale="5" xChannelSelector="R" yChannelSelector="G" result="wobbly" />
+              <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="1" seed={9 + i * 10} result="grain" />
+              <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.2 1.75" result="mask" />
+              <feComposite in="wobbly" in2="mask" operator="in" />
+            </filter>
+            <filter id={`boil-wobble-${i}`} x="-5%" y="-5%" width="110%" height="110%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed={2 + i * 10} result="warp" />
+              <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </g>
+        ))}
       </defs>
 
       {/* sky: Bitcoin sun top right, two clouds, a few birds */}
-      <g style={{ filter: "url(#wobble)" }}>
+      <g className={s.boilWobble} style={{ filter: "url(#wobble)" }}>
         <path d="M1302 20v-16M1350 44l12-12M1366 92h18M1254 44l-12-12M1350 140l12 12M1236 92h-18" style={stroke(4)} />
       </g>
-      <g style={{ filter: "url(#sketch)" }}>
+      <g className={s.boilSketch} style={{ filter: "url(#sketch)" }}>
         <path
           d="M1303 40c30 0 52 24 51 53-1 28-24 51-53 50-28-1-50-23-50-52 1-28 22-51 53-51"
           style={shape("url(#sun-fill)")}
         />
       </g>
-      <g style={{ filter: "url(#wobble)" }}>
+      <g className={s.boilWobble} style={{ filter: "url(#wobble)" }}>
         <path
           d="M1288 66v54M1288 66h17c9 0 14 5 14 12s-5 12-14 12h-17M1288 90h19c9 0 15 6 15 14s-6 16-16 16h-18M1296 58v8M1306 58v8M1296 120v8M1306 120v8"
           style={stroke(4)}
@@ -62,7 +79,7 @@ export function HeroScenery({ className }: { className?: string }) {
           style={shape("var(--color-paper)", 3.5)}
         />
       </g>
-      <g style={{ filter: "url(#wobble)" }}>
+      <g className={s.boilWobble} style={{ filter: "url(#wobble)" }}>
         <path
           d="M250 70c8-8 14-8 20 0 6-8 12-8 20 0M300 104c6-6 11-6 16 0 5-6 10-6 16 0M1090 60c7-7 12-7 18 0 6-7 11-7 18 0"
           style={stroke(3.5)}
@@ -78,17 +95,17 @@ export function HeroScenery({ className }: { className?: string }) {
       </g>
 
       {/* little shop on the back hill */}
-      <g style={{ filter: "url(#sketch)" }}>
+      <g className={s.boilSketch} style={{ filter: "url(#sketch)" }}>
         <path d="M352 286v-58h92v58" style={shape("var(--color-paper)", 4)} />
         <path d="M342 230l12-30h88l12 30z" style={shape("var(--color-yellow)", 4)} />
         <path d="M384 286v-34h26v34" style={shape("var(--color-paper-2)", 3.5)} />
       </g>
-      <g style={{ filter: "url(#wobble)" }}>
+      <g className={s.boilWobble} style={{ filter: "url(#wobble)" }}>
         <path d="M370 200l-6 30M398 200v30M426 200l6 30" style={stroke(3.5)} />
       </g>
 
       {/* tree on the right */}
-      <g style={{ filter: "url(#sketch)" }}>
+      <g className={s.boilSketch} style={{ filter: "url(#sketch)" }}>
         <path d="M1062 300v-50" style={stroke(7)} />
         <path
           d="M1062 262c-34 2-48-26-30-46-12-26 18-46 38-32 18-18 50-4 44 22 22 12 10 46-16 44-8 12-26 14-36 12z"

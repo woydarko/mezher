@@ -1,0 +1,37 @@
+/*
+ * Boiling line: the hand-drawn pieces swap between three noise seeds about 7 times a second,
+ * so the pencil line redraws in place like a frame-by-frame animation. Filters live in HeroScenery.
+ * The inline url(#sketch)/url(#wobble) stays as the still frame; the global prefers-reduced-motion rule stops this.
+ */
+.boilSketch {
+  animation: boil-sketch 0.42s infinite;
+}
+
+.boilWobble {
+  animation: boil-wobble 0.42s infinite;
+}
+
+/* filter urls do not interpolate, so each keyframe holds until the next one */
+@keyframes boil-sketch {
+  0% {
+    filter: url(#boil-sketch-0);
+  }
+  33% {
+    filter: url(#boil-sketch-1);
+  }
+  66% {
+    filter: url(#boil-sketch-2);
+  }
+}
+
+@keyframes boil-wobble {
+  0% {
+    filter: url(#boil-wobble-0);
+  }
+  33% {
+    filter: url(#boil-wobble-1);
+  }
+  66% {
+    filter: url(#boil-wobble-2);
+  }
+}
