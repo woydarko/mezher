@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { buildLink, linkQuery, parseLink, randomOrder } from "@/lib/link";
+import { buildLink, embedSnippet, linkQuery, parseLink, randomOrder } from "@/lib/link";
 
 const ORIGIN = "https://mezher.example";
 const TO = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -93,6 +95,60 @@ describe("buildLink + parseLink", () => {
 describe("randomOrder", () => {
   it("returns 16 lowercase hex chars", () => {
     expect(randomOrder()).toMatch(/^[0-9a-f]{16}$/);
+  });
+});
+
+describe("embedSnippet", () => {
+  it("renders a script tag with the order as data attributes", () => {
+    expect(embedSnippet(ORIGIN, { to: TO.toLowerCase(), amount: "12", order: ORDER.toUpperCase() })).toEqual({
+      ok: true,
+      html: `<script src="${ORIGIN}/embed.js" data-to="${TO}" data-amount="12" data-order="${ORDER}" async></script>`,
+    });
+  });
+
+  it("escapes the label so it cannot break out of the attribute", () => {
+    const out = embedSnippet(ORIGIN, { to: TO, amount: "1", order: ORDER, label: `a"><img src=x>&` });
+    expect(out.ok && out.html).toContain(`data-label="a&quot;>&lt;img src=x>&amp;"`);
+  });
+
+  it("rejects what buildLink rejects", () => {
+    expect(embedSnippet(ORIGIN, { to: TO, amount: "0", order: ORDER })).toEqual({
+      ok: false,
+      field: "amount",
+      message: "Enter an amount greater than 0.",
+    });
+  });
+});
+
+describe("public/embed.js", () => {
+  const source = readFileSync(new URL("../public/embed.js", import.meta.url), "utf8");
+
+  // Runs the script against a minimal DOM and returns the link it inserted, if any.
+  function run(dataset: Record<string, string>) {
+    let inserted: { href: string; target: string; rel: string; textContent: string } | undefined;
+    const script = {
+      src: ORIGIN + "/embed.js",
+      dataset,
+      insertAdjacentElement: (_: string, el: typeof inserted) => (inserted = el),
+    };
+    const document = {
+      currentScript: script,
+      createElement: () => ({ setAttribute() {} }),
+    };
+    runInNewContext(source, { document, URL, URLSearchParams, console: { warn() {} } });
+    return inserted;
+  }
+
+  it("inserts a new-tab link to the same /pay URL buildLink makes", () => {
+    const a = run({ to: TO, amount: "12", order: ORDER, label: "Coffee" });
+    const built = buildLink(ORIGIN, { to: TO, amount: "12", order: ORDER, label: "Coffee" });
+    expect(built.ok && a?.href).toBe(built.ok && built.url);
+    expect(parseLink(new URL(a!.href).searchParams).ok).toBe(true);
+    expect(a).toMatchObject({ target: "_blank", rel: "noopener", textContent: "Pay 12 MUSD with Bitcoin" });
+  });
+
+  it("renders nothing when a required field is missing", () => {
+    expect(run({ to: TO, amount: "12" })).toBeUndefined();
   });
 });
 

@@ -58,6 +58,25 @@ export function buildLink(
   return { ok: true, url: origin + "/pay?" + params.toString() };
 }
 
+/** `<script>` tag that renders a "Pay with Bitcoin" button for this order on the merchant's own site. */
+export function embedSnippet(
+  origin: string,
+  input: LinkInput,
+): { ok: true; html: string } | { ok: false; field: LinkField; message: string } {
+  const error = validate(input);
+  if (error) return { ok: false, ...error };
+
+  const attrs: [string, string][] = [
+    ["src", origin + "/embed.js"],
+    ["data-to", getAddress(input.to)],
+    ["data-amount", input.amount],
+    ["data-order", input.order.toLowerCase()],
+  ];
+  if (input.label) attrs.push(["data-label", input.label]);
+  const escape = (v: string) => v.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+  return { ok: true, html: `<script ${attrs.map(([k, v]) => `${k}="${escape(v)}"`).join(" ")} async></script>` };
+}
+
 /** Query string of a pasted link (full URL, "/pay?…", "?…" or bare "to=…"), or null unless it is a valid link. */
 export function linkQuery(input: string): string | null {
   const text = input.trim();

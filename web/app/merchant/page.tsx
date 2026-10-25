@@ -13,7 +13,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
 import styles from "@/components/ui.module.css";
-import { buildLink, randomOrder } from "@/lib/link";
+import { buildLink, embedSnippet, randomOrder } from "@/lib/link";
 import { ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET } from "@/lib/mezo";
 import { fetchPaidLogs } from "@/lib/paid-logs";
 
@@ -32,7 +32,8 @@ export default function MerchantPage() {
   const [order, setOrder] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [url, setUrl] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [embed, setEmbed] = useState<string | null>(null);
+  const [copied, setCopied] = useState<"link" | "embed" | null>(null);
   const [copyFailed, setCopyFailed] = useState(false);
 
   useEffect(() => setOrder(randomOrder()), []);
@@ -49,23 +50,28 @@ export default function MerchantPage() {
   });
 
   function create() {
-    const result = buildLink(window.location.origin, { to, amount, order, label: label || undefined });
+    const input = { to, amount, order, label: label || undefined };
+    const result = buildLink(window.location.origin, input);
     if (!result.ok) {
       setErrors({ [result.field]: result.message });
       setUrl(null);
+      setEmbed(null);
       return;
     }
+    const snippet = embedSnippet(window.location.origin, input);
     setErrors({});
     setUrl(result.url);
-    setCopied(false);
+    setEmbed(snippet.ok ? snippet.html : null);
+    setCopied(null);
     setCopyFailed(false);
   }
 
-  async function copy() {
-    if (!url) return;
+  async function copy(which: "link" | "embed") {
+    const text = which === "link" ? url : embed;
+    if (!text) return;
     // A blocked or pending clipboard permission can reject or never settle; either way, say so.
     const ok = await Promise.race([
-      navigator.clipboard.writeText(url).then(
+      navigator.clipboard.writeText(text).then(
         () => true,
         () => false,
       ),
@@ -73,8 +79,8 @@ export default function MerchantPage() {
     ]);
     setCopyFailed(!ok);
     if (ok) {
-      setCopied(true);
-      setTimeout(() => setCopied(false), COPIED_MS);
+      setCopied(which);
+      setTimeout(() => setCopied(null), COPIED_MS);
     }
   }
 
@@ -120,16 +126,31 @@ export default function MerchantPage() {
           <div className={styles.linkOut}>
             <span className={styles.linkText + " mono"}>{url}</span>
             <div>
-              <SecondaryButton onClick={copy}>
-                <Doodle name={copied ? "check" : "copy"} className={styles.icon} />
-                {copied ? "Copied" : "Copy link"}
+              <SecondaryButton onClick={() => copy("link")}>
+                <Doodle name={copied === "link" ? "check" : "copy"} className={styles.icon} />
+                {copied === "link" ? "Copied" : "Copy link"}
               </SecondaryButton>
             </div>
           </div>
         )}
         {url && <LinkQr url={url} />}
+        {embed && (
+          <>
+            <h2>Add it to your site</h2>
+            <p>Paste this where the button should appear. It opens this checkout in a new tab.</p>
+            <div className={styles.linkOut}>
+              <span className={styles.linkText + " mono"}>{embed}</span>
+              <div>
+                <SecondaryButton onClick={() => copy("embed")}>
+                  <Doodle name={copied === "embed" ? "check" : "copy"} className={styles.icon} />
+                  {copied === "embed" ? "Copied" : "Copy code"}
+                </SecondaryButton>
+              </div>
+            </div>
+          </>
+        )}
         {url && copyFailed && (
-          <StatusLine tone="error">Your browser blocked copying. Select the link above and copy it.</StatusLine>
+          <StatusLine tone="error">Your browser blocked copying. Select the text above and copy it.</StatusLine>
         )}
       </Card>
 
