@@ -11,7 +11,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { describe, expect, it } from "vitest";
 import { ADDRESSES } from "@/lib/mezo";
-import { permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
+import { openTroveTypedData, orderTypedData, permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
 
 const BORROWER: Address = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
 const MERCHANT: Address = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -86,5 +86,45 @@ describe("splitSig", () => {
     const { v, r, s } = splitSig(sig);
     expect([27, 28]).toContain(v);
     expect(concat([r, s, toHex(v, { size: 1 })])).toBe(sig);
+  });
+});
+
+describe("orderTypedData", () => {
+  const order = {
+    payer: BORROWER,
+    merchant: MERCHANT,
+    amount: 12n * 10n ** 18n,
+    fromBalance: 5n * 10n ** 18n,
+    minIcrAfter: 1_505_000_000_000_000_000n,
+    orderId: ("0x" + "0".repeat(48) + "3f9a1c0d2b4e5f60") as Hex,
+    deadline: 1_800_000_000n,
+  };
+
+  it("orderTypedData matches the contract's EIP-712 digest", () => {
+    // Vector from MezherPay._hashTypedDataV4 via a throwaway forge test (chainId 31611, contract 0x5615dEB7...b72f).
+    const digest = hashTypedData(orderTypedData(order, 31611, "0x5615dEB798BB3E4dFa0139dFa1b3D433Cc23b72f"));
+    expect(digest).toBe("0x1b62d9d358d532d5abf9e211b6d9f8aa196fbb7a34b85246c1b890ab1d2b9e4c");
+  });
+});
+
+describe("openTroveTypedData", () => {
+  it("uses the BorrowerOperationsSignatures domain and OpenTrove field order", () => {
+    const td = openTroveTypedData({ assetAmountWei: 3n, debtAmountWei: 4n, borrower: BORROWER, recipient: BORROWER, nonce: 1n, deadline: 2n });
+    expect(td.domain).toEqual({
+      name: "BorrowerOperationsSignatures",
+      version: "1",
+      chainId: 31611,
+      verifyingContract: ADDRESSES.borrowerOpsSignatures,
+    });
+    expect(td.primaryType).toBe("OpenTrove");
+    expect(td.types.OpenTrove.map((f) => `${f.type} ${f.name}`)).toEqual([
+      "uint256 assetAmount",
+      "uint256 debtAmount",
+      "address borrower",
+      "address recipient",
+      "uint256 nonce",
+      "uint256 deadline",
+    ]);
+    expect(td.message).toEqual({ assetAmount: 3n, debtAmount: 4n, borrower: BORROWER, recipient: BORROWER, nonce: 1n, deadline: 2n });
   });
 });

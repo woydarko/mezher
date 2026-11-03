@@ -1,15 +1,28 @@
 import type { Address, Hex } from "viem";
 import { errorCopy } from "./errors";
 
-/** Mirrors MezherPay.PermitSig / BorrowSig. */
+/** Mirrors MezherPay.Order / PermitSig / BorrowSig / OpenSig. */
+export type Order = {
+  payer: Address;
+  merchant: Address;
+  amount: bigint;
+  fromBalance: bigint;
+  minIcrAfter: bigint;
+  orderId: Hex;
+  deadline: bigint;
+};
 export type PermitSig = { deadline: bigint; v: number; r: Hex; s: Hex };
 export type BorrowSig = { upperHint: Address; lowerHint: Address; deadline: bigint; signature: Hex };
 
+export type OpenSig = BorrowSig & { debtAmount: bigint };
+
 export type CheckoutState = {
-  step: "idle" | "signing_permit" | "signing_borrow" | "sending" | "confirming" | "paid" | "failed";
+  step: "idle" | "signing_order" | "signing_permit" | "signing_borrow" | "sending" | "confirming" | "paid" | "failed";
   address?: Address;
+  orderSig?: Hex;
   permit?: PermitSig;
   borrow?: BorrowSig;
+  open?: OpenSig;
   hash?: Hex;
   error?: string;
 };
@@ -17,8 +30,10 @@ export type CheckoutState = {
 export type CheckoutEvent =
   | { type: "ADDRESS_CHANGED"; address?: Address }
   | { type: "START" }
+  | { type: "ORDER_SIGNED"; orderSig: Hex }
   | { type: "PERMIT_SIGNED"; permit: PermitSig }
   | { type: "BORROW_SIGNED"; borrow: BorrowSig }
+  | { type: "OPEN_SIGNED"; open: OpenSig }
   | { type: "SENT"; hash: Hex }
   | { type: "CONFIRMED" }
   | { type: "FAILED"; code: string }
@@ -31,11 +46,15 @@ export function checkoutReducer(s: CheckoutState, e: CheckoutEvent): CheckoutSta
       if (e.address === s.address || s.step === "confirming" || s.step === "paid") return s;
       return { step: "idle", address: e.address };
     case "START":
-      return { step: "signing_permit", address: s.address };
+      return { step: "signing_order", address: s.address };
+    case "ORDER_SIGNED":
+      return { ...s, step: "signing_permit", orderSig: e.orderSig };
     case "PERMIT_SIGNED":
       return { ...s, step: "signing_borrow", permit: e.permit };
     case "BORROW_SIGNED":
       return { ...s, step: "sending", borrow: e.borrow };
+    case "OPEN_SIGNED":
+      return { ...s, step: "sending", open: e.open };
     case "SENT":
       return { ...s, step: "confirming", hash: e.hash };
     case "CONFIRMED":
@@ -45,4 +64,16 @@ export function checkoutReducer(s: CheckoutState, e: CheckoutEvent): CheckoutSta
     case "RESET":
       return { step: "idle", address: s.address };
   }
+}
+
+/** EIP-7702 delegation designator: the account is still an EOA that signs with ECDSA. */
+const DELEGATION_PREFIX = "0xef0100";
+
+/**
+ * True for a contract wallet. The order, permit and Mezo signatures are all ECDSA (no ERC-1271), so a smart
+ * account cannot pay and is sent to an EVM wallet account instead.
+ */
+export async function isSmartAccount(client: { getCode(a: { address: Address }): Promise<Hex | undefined> }, address: Address): Promise<boolean> {
+  const code = (await client.getCode({ address })) ?? "0x";
+  return code !== "0x" && !code.toLowerCase().startsWith(DELEGATION_PREFIX);
 }

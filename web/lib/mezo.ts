@@ -29,6 +29,9 @@ export const ADDRESSES = {
   mezherPay: process.env.NEXT_PUBLIC_MEZHER_PAY_ADDRESS as Address | undefined,
 } as const;
 
+/** Fee allowance a merchant grants MezherPay in one activation permit: 10,000 MUSD. */
+export const ACTIVATION_BUDGET_WEI = 10_000n * 10n ** 18n;
+
 /** First block to scan for Paid events (the MezherPay deploy block). */
 export const MEZHER_PAY_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK || "0");
 
@@ -46,6 +49,31 @@ export const musdAbi = [
     stateMutability: "view",
     inputs: [{ name: "owner", type: "address" }],
     outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "allowance",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+    ],
+    outputs: [{ type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "permit",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "spender", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "deadline", type: "uint256" },
+      { name: "v", type: "uint8" },
+      { name: "r", type: "bytes32" },
+      { name: "s", type: "bytes32" },
+    ],
+    outputs: [],
   },
 ] as const;
 

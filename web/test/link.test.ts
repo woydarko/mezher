@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
-import { buildLink, embedSnippet, linkQuery, parseLink, randomOrder } from "@/lib/link";
+import { buildLink, embedSnippet, linkQuery, merchantActivated, parseLink, randomOrder } from "@/lib/link";
 
 const ORIGIN = "https://mezher.example";
 const TO = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -165,5 +165,21 @@ describe("linkQuery", () => {
     for (const input of ["", "hello", ORIGIN + "/pay?to=" + TO + "&amount=12", ORDER]) {
       expect(linkQuery(input)).toBeNull();
     }
+  });
+});
+
+describe("merchantActivated", () => {
+  it("merchantActivated is false for a zero allowance", () => {
+    expect(merchantActivated(0n, 0n)).toBe(false);
+    expect(merchantActivated(0n, 5n)).toBe(false);
+  });
+
+  it("is false when the remaining budget cannot cover the fee", () => {
+    expect(merchantActivated(4n, 5n)).toBe(false);
+  });
+
+  it("is true when the allowance covers the fee", () => {
+    expect(merchantActivated(5n, 5n)).toBe(true);
+    expect(merchantActivated(10n ** 22n, 5n)).toBe(true);
   });
 });

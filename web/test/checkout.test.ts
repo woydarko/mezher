@@ -1,11 +1,12 @@
 import type { Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { checkoutReducer, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isSmartAccount, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
 import { errorCopy } from "@/lib/errors";
 
 const A = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
 const B = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
 const HASH = ("0x" + "ab".repeat(32)) as Hex;
+const ORDER_SIG = ("0x" + "44".repeat(65)) as Hex;
 const permit: PermitSig = { deadline: 1n, v: 27, r: ("0x" + "11".repeat(32)) as Hex, s: ("0x" + "22".repeat(32)) as Hex };
 const borrow: BorrowSig = {
   upperHint: "0x0000000000000000000000000000000000000000",
@@ -28,6 +29,8 @@ describe("checkoutReducer", () => {
   it("walks the happy path and keeps the hash", () => {
     let s: CheckoutState = { step: "idle", address: A };
     s = checkoutReducer(s, { type: "START" });
+    expect(s.step).toBe("signing_order");
+    s = checkoutReducer(s, { type: "ORDER_SIGNED", orderSig: ORDER_SIG });
     expect(s.step).toBe("signing_permit");
     s = checkoutReducer(s, { type: "PERMIT_SIGNED", permit });
     expect(s.step).toBe("signing_borrow");
@@ -36,7 +39,18 @@ describe("checkoutReducer", () => {
     s = checkoutReducer(s, { type: "SENT", hash: HASH });
     expect(s.step).toBe("confirming");
     s = checkoutReducer(s, { type: "CONFIRMED" });
-    expect(s).toEqual({ step: "paid", address: A, permit, borrow, hash: HASH });
+    expect(s).toEqual({ step: "paid", address: A, orderSig: ORDER_SIG, permit, borrow, hash: HASH });
+  });
+
+  it("checkout moves through order, permit and open signing steps for a new Trove", () => {
+    let s: CheckoutState = { step: "idle", address: A };
+    s = checkoutReducer(s, { type: "START" });
+    s = checkoutReducer(s, { type: "ORDER_SIGNED", orderSig: ORDER_SIG });
+    s = checkoutReducer(s, { type: "PERMIT_SIGNED", permit });
+    expect(s.step).toBe("signing_borrow");
+    s = checkoutReducer(s, { type: "OPEN_SIGNED", open: { ...borrow, debtAmount: 1n } });
+    expect(s.step).toBe("sending");
+    expect(s.open).toMatchObject({ debtAmount: 1n });
   });
 
   it("keeps a submitted payment when the account changes", () => {
@@ -61,7 +75,12 @@ describe("errorCopy", () => {
   });
 
   it.each([
-    ["IcrBelowFloor", "Your Trove would drop below 150%. Pay less or add collateral on Mezo."],
+    ["IcrBelowFloor", "Your Trove would drop below your minimum ratio. Pay less or add collateral on Mezo."],
+    ["OrderAlreadySettled", "This order is already paid. Nothing was taken from you."],
+    ["OrderExpired", "This payment request expired. Press Pay again."],
+    ["BadOrderSignature", "Your signature did not match this payment. Press Pay again."],
+    ["ERC20InsufficientAllowance", "This shop can't take payments right now. Ask the shop to activate payments, then try again."],
+    ["own_gas_required", "This payment is too small for free gas. Pay with your own gas."],
     ["rate_limited", "Too many attempts. Wait a minute and try again."],
     ["relayer_unavailable", "Our gas relay is down. Pay with your own gas instead."],
     ["Signature expired", "Your signature expired. Press Pay again."],
@@ -71,5 +90,19 @@ describe("errorCopy", () => {
 
   it("names unknown codes", () => {
     expect(errorCopy("weird_thing")).toBe("Something went wrong (weird_thing). Try again.");
+  });
+});
+
+describe("isSmartAccount", () => {
+  const client = (code: Hex | undefined) => ({ getCode: async () => code });
+
+  it("isSmartAccount is true for an address with code and false for an EOA", async () => {
+    expect(await isSmartAccount(client("0x6080604052"), A)).toBe(true);
+    expect(await isSmartAccount(client(undefined), A)).toBe(false);
+    expect(await isSmartAccount(client("0x"), A)).toBe(false);
+  });
+
+  it("treats an EIP-7702 delegated EOA as an EOA", async () => {
+    expect(await isSmartAccount(client(("0xef0100" + "ab".repeat(20)) as Hex), A)).toBe(false);
   });
 });

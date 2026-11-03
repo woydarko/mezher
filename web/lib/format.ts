@@ -12,3 +12,6 @@ export function formatRatio(e18: bigint): string {
   const tenths = e18 / 10n ** 15n;
   return (tenths / 10n).toString() + "." + (tenths % 10n).toString() + "%";
 }
+
+/** JSON.stringify that writes bigints as decimal strings, the shape the relay routes expect. */
+export const toJson = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x));

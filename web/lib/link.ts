@@ -89,3 +89,11 @@ export function randomOrder(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(8));
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
+
+/**
+ * True when the merchant's MUSD allowance to MezherPay covers the fee of this order. A zero allowance is never
+ * active, and a spent-down budget below one fee would revert the payment. The caller skips this for the treasury.
+ */
+export function merchantActivated(allowanceWei: bigint, feeWei: bigint): boolean {
+  return allowanceWei > 0n && allowanceWei >= feeWei;
+}

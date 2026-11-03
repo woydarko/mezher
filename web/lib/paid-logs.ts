@@ -1,4 +1,4 @@
-import { getAbiItem, type Address, type Hex, type PublicClient } from "viem";
+import { encodeAbiParameters, getAbiItem, keccak256, type Address, type Hex, type PublicClient } from "viem";
 import { ADDRESSES, mezherPayAbi } from "./mezo";
 
 export type PaidLog = {
@@ -8,6 +8,7 @@ export type PaidLog = {
   amountWei: bigint;
   fromBalanceWei: bigint;
   borrowedWei: bigint;
+  feeWei: bigint;
   txHash: Hex;
   blockNumber: bigint;
 };
@@ -50,6 +51,7 @@ export async function fetchPaidLogs(
         amountWei: l.args.amount!,
         fromBalanceWei: l.args.fromBalance!,
         borrowedWei: l.args.borrowed!,
+        feeWei: l.args.fee!,
         txHash: l.transactionHash!,
         blockNumber: l.blockNumber!,
       });
@@ -70,7 +72,7 @@ export async function fetchBlockTimes(client: BlockClient, blocks: bigint[]): Pr
   return out;
 }
 
-/** Only a payment of at least the requested amount marks the order paid, so a 1-wei payment cannot. */
-export function isOrderPaid(logs: PaidLog[], orderId: Hex, amountWei: bigint): boolean {
-  return logs.some((l) => l.orderId.toLowerCase() === orderId.toLowerCase() && l.amountWei >= amountWei);
+/** Key of MezherPay.settled: keccak256(abi.encode(payer, merchant, orderId)). */
+export function settledKey(payer: Address, merchant: Address, orderId: Hex): Hex {
+  return keccak256(encodeAbiParameters([{ type: "address" }, { type: "address" }, { type: "bytes32" }], [payer, merchant, orderId]));
 }

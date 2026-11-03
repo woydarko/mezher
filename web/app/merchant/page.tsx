@@ -2,8 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { isAddress, type Address } from "viem";
-import { useAccount, usePublicClient } from "wagmi";
+import { isAddress, isAddressEqual, parseUnits, type Address, type Hex } from "viem";
+import { useAccount, usePublicClient, useSignTypedData } from "wagmi";
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
@@ -13,19 +13,25 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
 import styles from "@/components/ui.module.css";
+import { useMerchantActivation } from "@/components/useMerchantActivation";
+import { errorCopy } from "@/lib/errors";
+import { toJson } from "@/lib/format";
 import { buildLink, embedSnippet, randomOrder } from "@/lib/link";
-import { ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET } from "@/lib/mezo";
+import { ACTIVATION_BUDGET_WEI, ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET, musdAbi } from "@/lib/mezo";
 import { fetchPaidLogs } from "@/lib/paid-logs";
+import { permitTypedData, splitSig } from "@/lib/signatures";
 
 const POLL_MS = 5_000;
 const COPIED_MS = 2_000;
 const COPY_TIMEOUT_MS = 2_000;
+const SIG_TTL_S = 15n * 60n;
 
 type Errors = Partial<Record<"to" | "amount" | "order" | "label", string>>;
 
 export default function MerchantPage() {
   const { address } = useAccount();
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
+  const { signTypedDataAsync } = useSignTypedData();
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
@@ -42,12 +48,53 @@ export default function MerchantPage() {
   }, [address]);
 
   const merchant = isAddress(to) ? (to as Address) : undefined;
+  const amountWei = /^\d+(\.\d{1,18})?$/.test(amount) ? parseUnits(amount, 18) : 0n;
+  const activation = useMerchantActivation(merchant, amountWei);
+  const [activating, setActivating] = useState<{ tone: "info" | "error"; text: string } | null>(null);
   const payments = useQuery({
     queryKey: ["paid", merchant],
     enabled: Boolean(merchant && publicClient && ADDRESSES.mezherPay),
     refetchInterval: POLL_MS,
     queryFn: () => fetchPaidLogs(publicClient!, { merchant: merchant!, fromBlock: MEZHER_PAY_DEPLOY_BLOCK }),
   });
+
+  /** Signs a permit for the fee budget; the relay sends it, so the merchant needs no BTC for gas. */
+  async function activate() {
+    const mezherPay = ADDRESSES.mezherPay;
+    if (!address || !publicClient || !mezherPay) return;
+    setActivating({ tone: "info", text: "Sign the message in your wallet…" });
+    try {
+      const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
+      const nonce = await publicClient.readContract({
+        address: ADDRESSES.musd,
+        abi: musdAbi,
+        functionName: "nonces",
+        args: [address],
+      });
+      const sig = await signTypedDataAsync(
+        permitTypedData({ owner: address, spender: mezherPay, valueWei: ACTIVATION_BUDGET_WEI, nonce, deadline }),
+      );
+      setActivating({ tone: "info", text: "Activating…" });
+      const permit = { owner: address, spender: mezherPay, value: ACTIVATION_BUDGET_WEI, deadline, ...splitSig(sig) };
+      const res = await fetch("/api/activate", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: toJson({ permit }),
+      }).catch(() => null);
+      const data: { hash?: Hex; error?: string; reason?: string } = res ? await res.json().catch(() => ({})) : {};
+      if (!res || res.status >= 500) throw new Error("Our gas relay is down. Try again in a minute.");
+      if (!res.ok || !data.hash) throw new Error(errorCopy(data.reason ?? data.error ?? "relay_" + res.status));
+      await publicClient
+        .waitForTransactionReceipt({ hash: data.hash, timeout: 60_000 })
+        // same stall guard as the checkout: one direct read after the timeout
+        .catch(() => publicClient.getTransactionReceipt({ hash: data.hash! }));
+      await activation.refetch();
+      setActivating(null);
+    } catch (err) {
+      const text = (err as { shortMessage?: string })?.shortMessage ?? (err as Error)?.message ?? "unknown";
+      setActivating({ tone: "error", text: errorCopy(text) });
+    }
+  }
 
   function create() {
     const input = { to, amount, order, label: label || undefined };
@@ -86,8 +133,29 @@ export default function MerchantPage() {
 
   return (
     <main className="page page-wide">
-      <Card>
+      <Card title="Step 1: Activate payments">
         <h1>Get paid in MUSD</h1>
+        <p>
+          Mezher takes a small fee from each payment you receive, paid in MUSD from your wallet after the customer
+          pays. Allow it once with a signed message. It costs you no gas.
+        </p>
+        {!ADDRESSES.mezherPay && <StatusLine tone="error">Payments are not live yet: MezherPay is not deployed.</StatusLine>}
+        {activation.activated === true && <StatusLine tone="success">Payments are active for this address.</StatusLine>}
+        {ADDRESSES.mezherPay && activation.activated !== true && (
+          <PrimaryButton
+            loading={activating?.tone === "info"}
+            loadingLabel={activating?.text}
+            disabled={!address || !merchant || !isAddressEqual(address, merchant)}
+            disabledReason="Connect the wallet you want to get paid at, and enter it as the Pay to address."
+            onClick={activate}
+          >
+            Activate payments
+          </PrimaryButton>
+        )}
+        {activating?.tone === "error" && <StatusLine tone="error">{activating.text}</StatusLine>}
+      </Card>
+
+      <Card title="Step 2: Create a link">
         <Field
           label="Pay to"
           value={to}
@@ -122,6 +190,11 @@ export default function MerchantPage() {
           spellCheck={false}
         />
         <PrimaryButton onClick={create}>Create payment link</PrimaryButton>
+        {url && activation.activated === false && (
+          <StatusLine tone="error">
+            Payments aren&apos;t active for this address yet, so customers can&apos;t pay this link. Activate above first.
+          </StatusLine>
+        )}
         {url && (
           <div className={styles.linkOut}>
             <span className={styles.linkText + " mono"}>{url}</span>

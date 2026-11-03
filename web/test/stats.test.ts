@@ -15,6 +15,7 @@ const log = (payer: Address, merchant: Address, amount: bigint, fromBalance: big
   amountWei: amount,
   fromBalanceWei: fromBalance,
   borrowedWei: amount - fromBalance,
+  feeWei: 0n,
   txHash: ("0x" + "1".repeat(64)) as Hex,
   blockNumber: 1n,
 });

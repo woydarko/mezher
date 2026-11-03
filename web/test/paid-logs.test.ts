@@ -1,6 +1,6 @@
 import type { Address, Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { fetchBlockTimes, fetchPaidLogs, isOrderPaid, type PaidLog } from "@/lib/paid-logs";
+import { fetchBlockTimes, fetchPaidLogs, settledKey } from "@/lib/paid-logs";
 
 const MERCHANT: Address = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
 const PAYER: Address = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
@@ -10,7 +10,7 @@ function rawLog(blockNumber: bigint, amount: bigint) {
   return {
     blockNumber,
     transactionHash: ("0x" + blockNumber.toString(16).padStart(64, "0")) as Hex,
-    args: { orderId: ORDER, payer: PAYER, merchant: MERCHANT, amount, fromBalance: 0n, borrowed: amount },
+    args: { orderId: ORDER, payer: PAYER, merchant: MERCHANT, amount, fromBalance: 0n, borrowed: amount, fee: amount / 200n },
   };
 }
 
@@ -30,6 +30,12 @@ describe("fetchPaidLogs", () => {
       [10_100n, 20_099n],
       [20_100n, 25_150n],
     ]);
+  });
+
+  it("fetchPaidLogs decodes the fee field", async () => {
+    const client = { getBlockNumber: async () => 5n, getLogs: async () => [rawLog(2n, 1000n)] };
+    const [log] = await fetchPaidLogs(client as never, { merchant: MERCHANT, fromBlock: 0n } as never);
+    expect(log?.feeWei).toBe(5n);
   });
 
   it("filters by merchant (and order when given) and returns newest first", async () => {
@@ -87,27 +93,9 @@ describe("fetchBlockTimes", () => {
   });
 });
 
-describe("isOrderPaid", () => {
-  const log = (amountWei: bigint): PaidLog => ({
-    orderId: ORDER,
-    payer: PAYER,
-    merchant: MERCHANT,
-    amountWei,
-    fromBalanceWei: 0n,
-    borrowedWei: amountWei,
-    txHash: ("0x" + "1".repeat(64)) as Hex,
-    blockNumber: 1n,
-  });
-
-  it("is true when a log for the order covers the amount", () => {
-    expect(isOrderPaid([log(12n)], ORDER, 12n)).toBe(true);
-  });
-
-  it("is false when the logged amount is lower than requested (a 1-wei fake cannot mark an order paid)", () => {
-    expect(isOrderPaid([log(1n)], ORDER, 12n)).toBe(false);
-  });
-
-  it("is false for another order", () => {
-    expect(isOrderPaid([log(12n)], ("0x" + "f".repeat(64)) as Hex, 12n)).toBe(false);
+describe("settledKey", () => {
+  it("matches keccak256(abi.encode(payer, merchant, orderId)) of MezherPay.settled", () => {
+    // Vector: cast keccak $(cast abi-encode "f(address,address,bytes32)" PAYER MERCHANT ORDER)
+    expect(settledKey(PAYER, MERCHANT, ORDER)).toBe("0x7990018f37a11213eec850033f267c17d6665deb037ebaf0440d9314d6a56ada");
   });
 });

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
 import { BaseError, ContractFunctionRevertedError, zeroAddress, type Address, type Hex } from "viem";
 import {
   useAccount,
@@ -16,15 +16,17 @@ import {
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
-import { OpenTroveCard } from "@/components/OpenTroveCard";
+import { OpenTroveCard, type OpenRequest } from "@/components/OpenTroveCard";
 import { WalletButton } from "@/components/WalletButton";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { RatioMeter } from "@/components/RatioMeter";
 import { ReceiptLine } from "@/components/ReceiptLine";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
-import { checkoutReducer, type BorrowSig, type PermitSig } from "@/lib/checkout";
-import { formatMusd, formatRatio } from "@/lib/format";
+import ui from "@/components/ui.module.css";
+import { useMerchantActivation } from "@/components/useMerchantActivation";
+import { checkoutReducer, isSmartAccount, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
+import { formatMusd, formatRatio, toJson } from "@/lib/format";
 import { getBorrowHints } from "@/lib/hints";
 import { linkQuery, parseLink, type PayLink } from "@/lib/link";
 import {
@@ -40,23 +42,26 @@ import {
   priceFeedAbi,
   troveManagerAbi,
 } from "@/lib/mezo";
-import { fetchPaidLogs, isOrderPaid } from "@/lib/paid-logs";
-import { icrE18, quote, type TroveState } from "@/lib/quote";
-import { permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
+import { fetchPaidLogs, settledKey } from "@/lib/paid-logs";
+import { UI_ICR_FLOOR_E18, icrE18, quote, type TroveState } from "@/lib/quote";
+import { openTroveTypedData, orderTypedData, permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
 import p from "./pay.module.css";
 
 const SIG_TTL_S = 15n * 60n; // client signature deadline: now + 15 minutes
-const ALREADY_PAID_CHECK = true;
+// The payer's minimum Trove ratio after the payment, signed into the order. The first is the UI floor.
+const MIN_ICR_CHOICES: { value: bigint; label: string }[] = [
+  { value: UI_ICR_FLOOR_E18, label: "150.5% (lowest)" },
+  { value: 1_750_000_000_000_000_000n, label: "175%" },
+  { value: 2_000_000_000_000_000_000n, label: "200%" },
+];
 const ZERO_32 = ("0x" + "0".repeat(64)) as Hex;
 const NO_PERMIT: PermitSig = { deadline: 0n, v: 27, r: ZERO_32, s: ZERO_32 };
 const NO_BORROW: BorrowSig = { upperHint: zeroAddress, lowerHint: zeroAddress, deadline: 0n, signature: "0x" };
 const OPEN_TROVE_URL = "https://testnet.mezo.org";
 
-type Payment = { payer: Address; merchant: Address; amount: bigint; fromBalance: bigint; orderId: Hex };
-type Signed = { payment: Payment; permit: PermitSig; borrow: BorrowSig };
+type Signed = { order: Order; orderSig: Hex; permit: PermitSig; borrow: BorrowSig };
 
 const short = (a: string) => a.slice(0, 6) + "…" + a.slice(-4);
-const toJson = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x));
 
 /** Custom error name or revert string when the wallet surfaces one, else viem's short message. */
 function errorCode(err: unknown): string {
@@ -158,6 +163,9 @@ function CheckoutFor({ link }: { link: PayLink }) {
   const { writeContractAsync } = useWriteContract();
   const { switchChain } = useSwitchChain();
   const mezherPay = ADDRESSES.mezherPay;
+  const [minIcr, setMinIcr] = useState(UI_ICR_FLOOR_E18);
+  // Which signatures this run needs, for the "Step n of m" text.
+  const [plan, setPlan] = useState({ permit: false, third: false });
 
   useEffect(() => {
     dispatch({ type: "ADDRESS_CHANGED", address });
@@ -212,13 +220,28 @@ function CheckoutFor({ link }: { link: PayLink }) {
   // Snapshot of the split shown on the receipt; the live quote moves once the balance updates.
   const [paidSplit, setPaidSplit] = useState<{ fromBalanceWei: bigint; borrowWei: bigint } | null>(null);
 
-  const paidLogs = useQuery({
-    queryKey: ["paid", link.to, link.orderId],
-    enabled: ALREADY_PAID_CHECK && Boolean(publicClient && mezherPay),
-    queryFn: () =>
-      fetchPaidLogs(publicClient!, { merchant: link.to, orderId: link.orderId, fromBlock: MEZHER_PAY_DEPLOY_BLOCK }),
+  const activation = useMerchantActivation(link.to, link.amountWei);
+  const smartAccount = useQuery({
+    queryKey: ["smart-account", address],
+    enabled: Boolean(address && publicClient),
+    queryFn: () => isSmartAccount(publicClient!, address!),
   });
-  const alreadyPaid = paidLogs.data?.find((l) => isOrderPaid([l], link.orderId, link.amountWei));
+  const settled = useReadContract({
+    chainId: MEZO_TESTNET.id,
+    address: mezherPay,
+    abi: mezherPayAbi,
+    functionName: "settled",
+    args: [settledKey(payer, link.to, link.orderId)],
+    query: { enabled: Boolean(address && mezherPay) },
+  });
+  const alreadyPaid = settled.data === true;
+  // Only the receipt link; "already paid" itself comes from `settled`.
+  const paidLog = useQuery({
+    queryKey: ["paid", link.to, link.orderId, address],
+    enabled: alreadyPaid && Boolean(publicClient),
+    queryFn: async () =>
+      (await fetchPaidLogs(publicClient!, { merchant: link.to, payer: address, orderId: link.orderId, fromBlock: MEZHER_PAY_DEPLOY_BLOCK }))[0],
+  });
 
   const { refetch } = reads;
   const confirm = useCallback(
@@ -238,28 +261,47 @@ function CheckoutFor({ link }: { link: PayLink }) {
     [publicClient, refetch],
   );
 
+  /** Signs the order, then the permit the contract spends (the MUSD nonce is read fresh). */
+  async function signOrderAndPermit(order: Order, deadline: bigint, withPermit: boolean) {
+    const orderSig = await signTypedDataAsync(orderTypedData(order, MEZO_TESTNET.id, mezherPay!));
+    dispatch({ type: "ORDER_SIGNED", orderSig });
+    let permit = NO_PERMIT;
+    if (withPermit) {
+      const nonce = await publicClient!.readContract({
+        address: ADDRESSES.musd,
+        abi: musdAbi,
+        functionName: "nonces",
+        args: [order.payer],
+      });
+      const sig = await signTypedDataAsync(
+        permitTypedData({ owner: order.payer, spender: mezherPay!, valueWei: order.fromBalance, nonce, deadline }),
+      );
+      permit = { deadline, ...splitSig(sig) };
+    }
+    dispatch({ type: "PERMIT_SIGNED", permit });
+    return { orderSig, permit };
+  }
+
+  const newOrder = (payerAddr: Address, fromBalance: bigint, deadline: bigint): Order => ({
+    payer: payerAddr,
+    merchant: link.to,
+    amount: link.amountWei,
+    fromBalance,
+    minIcrAfter: minIcr,
+    orderId: link.orderId,
+    deadline,
+  });
+
   async function pay() {
     if (!address || !publicClient || !mezherPay || !trove || q?.state !== "ok") return;
     setFallback(null);
     setPaidSplit({ fromBalanceWei: q.fromBalanceWei, borrowWei: q.borrowWei });
+    setPlan({ permit: q.fromBalanceWei > 0n, third: q.borrowWei > 0n });
     dispatch({ type: "START" });
     try {
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
-
-      let permit = NO_PERMIT;
-      if (q.fromBalanceWei > 0n) {
-        const nonce = await publicClient.readContract({
-          address: ADDRESSES.musd,
-          abi: musdAbi,
-          functionName: "nonces",
-          args: [address],
-        });
-        const sig = await signTypedDataAsync(
-          permitTypedData({ owner: address, spender: mezherPay, valueWei: q.fromBalanceWei, nonce, deadline }),
-        );
-        permit = { deadline, ...splitSig(sig) };
-      }
-      dispatch({ type: "PERMIT_SIGNED", permit });
+      const order = newOrder(address, q.fromBalanceWei, deadline);
+      const { orderSig, permit } = await signOrderAndPermit(order, deadline, q.fromBalanceWei > 0n);
 
       let borrow = NO_BORROW;
       if (q.borrowWei > 0n) {
@@ -280,31 +322,18 @@ function CheckoutFor({ link }: { link: PayLink }) {
       }
       dispatch({ type: "BORROW_SIGNED", borrow });
 
-      const signed: Signed = {
-        payment: {
-          payer: address,
-          merchant: link.to,
-          amount: link.amountWei,
-          fromBalance: q.fromBalanceWei,
-          orderId: link.orderId,
-        },
-        permit,
-        borrow,
-      };
-      // MezherPay accepts a payment without a borrow only from the payer (BalanceOnlyNeedsPayer).
-      if (q.borrowWei === 0n) {
-        await confirm(await submitOwnGas(signed));
-        return;
-      }
+      const signed: Signed = { order, orderSig, permit, borrow };
       const res = await fetch("/api/relay", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: toJson(signed),
       }).catch(() => null);
       const data: { hash?: Hex; error?: string; reason?: string } = res ? await res.json().catch(() => ({})) : {};
-      if (!res || res.status >= 500) {
+      const tooSmall = data.error === "own_gas_required";
+      if (!res || res.status >= 500 || tooSmall) {
+        // Relay down, or too small to sponsor: the payer can send the same signatures with their own gas.
         setFallback(signed);
-        dispatch({ type: "FAILED", code: "relayer_unavailable" });
+        dispatch({ type: "FAILED", code: tooSmall ? "own_gas_required" : "relayer_unavailable" });
         return;
       }
       if (!res.ok || !data.hash) {
@@ -317,13 +346,59 @@ function CheckoutFor({ link }: { link: PayLink }) {
     }
   }
 
+  /** No Trove yet: sign order, permit and Mezo's OpenTrove, then the payer sends one openAndPay with the BTC. */
+  async function openAndPay(a: OpenRequest) {
+    if (!address || !publicClient || !mezherPay) return;
+    setFallback(null);
+    setPaidSplit({ fromBalanceWei: link.amountWei, borrowWei: 0n });
+    setPlan({ permit: true, third: true });
+    dispatch({ type: "START" });
+    try {
+      const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
+      const order = newOrder(address, link.amountWei, deadline);
+      const { orderSig, permit } = await signOrderAndPermit(order, deadline, true);
+
+      const hints = await getBorrowHints(publicClient, { collWei: a.collWei, debtAfterWei: a.totalDebtWei });
+      const nonce = await publicClient.readContract({
+        address: ADDRESSES.borrowerOpsSignatures,
+        abi: borrowerOpsSignaturesAbi,
+        functionName: "getNonce",
+        args: [address],
+      });
+      const signature = await signTypedDataAsync(
+        openTroveTypedData({
+          assetAmountWei: a.collWei,
+          debtAmountWei: a.debtWei,
+          borrower: address,
+          recipient: address,
+          nonce,
+          deadline,
+        }),
+      );
+      const open: OpenSig = { ...hints, deadline, signature, debtAmount: a.debtWei };
+      dispatch({ type: "OPEN_SIGNED", open });
+
+      const hash = await writeContractAsync({
+        chainId: MEZO_TESTNET.id,
+        address: mezherPay,
+        abi: mezherPayAbi,
+        functionName: "openAndPay",
+        args: [order, orderSig, permit, open],
+        value: a.collWei,
+      });
+      await confirm(hash);
+    } catch (err) {
+      dispatch({ type: "FAILED", code: errorCode(err) });
+    }
+  }
+
   function submitOwnGas(s: Signed): Promise<Hex> {
     return writeContractAsync({
       chainId: MEZO_TESTNET.id,
       address: mezherPay!,
       abi: mezherPayAbi,
       functionName: "pay",
-      args: [s.payment, s.permit, s.borrow],
+      args: [s.order, s.orderSig, s.permit, s.borrow],
     });
   }
 
@@ -384,21 +459,48 @@ function CheckoutFor({ link }: { link: PayLink }) {
       <main className="page page-center">
         <OrderCard link={link} />
         <Card>
-          <StatusLine tone="success" href={explorerTx(alreadyPaid.txHash)}>
+          <StatusLine tone="success" href={paidLog.data && explorerTx(paidLog.data.txHash)}>
             Already paid
           </StatusLine>
-          <p>This order was paid by {short(alreadyPaid.payer)}. Nothing more to do.</p>
+          <p>You already paid this order. Nothing more to do.</p>
         </Card>
       </main>
     );
   }
 
-  const busy = state.step === "signing_permit" || state.step === "signing_borrow" || state.step === "sending";
+  const busy =
+    state.step === "signing_order" ||
+    state.step === "signing_permit" ||
+    state.step === "signing_borrow" ||
+    state.step === "sending";
+  const steps = 1 + (plan.permit ? 1 : 0) + (plan.third ? 1 : 0);
+  const stepOf = (n: number, what: string) => "Step " + n + " of " + steps + ": " + what;
   let loadingLabel = "Sending…";
-  if (q?.state === "ok" && state.step === "signing_permit")
-    loadingLabel = "Sign to move " + formatMusd(q.fromBalanceWei) + " MUSD from your balance";
-  if (q?.state === "ok" && state.step === "signing_borrow")
-    loadingLabel = "Sign to borrow " + formatMusd(q.borrowWei) + " MUSD to this merchant";
+  if (state.step === "signing_order") loadingLabel = stepOf(1, "sign this payment");
+  if (state.step === "signing_permit") loadingLabel = stepOf(2, "sign the MUSD move");
+  if (state.step === "signing_borrow")
+    loadingLabel = stepOf(steps, trove?.status === 1 ? "sign the borrow to this merchant" : "sign opening your Trove");
+
+  // Nothing is signed until the wallet is a regular account and the shop can pay its fee.
+  let gate: ReactNode = null;
+  if (smartAccount.data === true)
+    gate = (
+      <StatusLine tone="error">
+        This wallet is a smart account, and it can&apos;t sign Mezher payments. Switch to a regular EVM wallet account
+        (a plain 0x address) and reload.
+      </StatusLine>
+    );
+  else if (activation.activated === false)
+    gate = (
+      <StatusLine tone="error">
+        This shop hasn&apos;t turned on payments yet, so you can&apos;t pay it. Ask the shop to activate payments in
+        Mezher.
+      </StatusLine>
+    );
+  else if (activation.isError || smartAccount.isError)
+    gate = <StatusLine tone="error">Can&apos;t reach Mezo testnet.</StatusLine>;
+  else if (activation.activated === undefined || smartAccount.data === undefined)
+    gate = <StatusLine tone="info">Checking the shop and your wallet…</StatusLine>;
 
   const onMezo = isConnected && chainId === MEZO_TESTNET.id;
 
@@ -422,7 +524,9 @@ function CheckoutFor({ link }: { link: PayLink }) {
 
       {onMezo && !mezherPay && <StatusLine tone="error">Payments are not live yet: MezherPay is not deployed.</StatusLine>}
 
-      {onMezo && mezherPay && (
+      {onMezo && mezherPay && gate && <Card>{gate}</Card>}
+
+      {onMezo && mezherPay && !gate && (
         <>
           {(reads.isLoading || (borrowWei > 0n && fee.isLoading)) && (
             <Card>
@@ -449,7 +553,10 @@ function CheckoutFor({ link }: { link: PayLink }) {
               payer={address}
               shortfallWei={q.shortfallWei}
               priceE18={priceE18}
-              onOpened={() => reads.refetch()}
+              busy={busy}
+              busyLabel={loadingLabel}
+              error={state.step === "failed" ? state.error : undefined}
+              onOpen={openAndPay}
             />
           )}
 
@@ -474,6 +581,25 @@ function CheckoutFor({ link }: { link: PayLink }) {
               />
               <ReceiptLine label="Merchant receives" value={formatMusd(link.amountWei) + " MUSD"} />
               <ReceiptLine label="Gas you pay" value={q.borrowWei > 0n ? "0" : "Network fee, under 0.000001 BTC"} />
+              <div className={ui.field}>
+                <label htmlFor="min-icr" className={ui.fieldLabel}>
+                  Keep my ratio above
+                </label>
+                <span className={ui.inputWrap}>
+                  <select
+                    id="min-icr"
+                    className={ui.input}
+                    value={minIcr.toString()}
+                    onChange={(e) => setMinIcr(BigInt(e.target.value))}
+                  >
+                    {MIN_ICR_CHOICES.map((c) => (
+                      <option key={c.label} value={c.value.toString()}>
+                        {c.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              </div>
               <PrimaryButton loading={busy} loadingLabel={loadingLabel} onClick={pay}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
