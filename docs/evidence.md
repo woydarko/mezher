@@ -37,7 +37,7 @@ The merchant in the other three is the same demo wallet. Gas figures and the bre
 
 ### Outside users
 
-**Outside users so far: 0.** `/proof` separates team wallets from outside ones, but it currently lists `0xeff1342219369dd9d8eabd0460fbac27c9e9abf4` as "outside". That wallet is a **team wallet** (it sent the `openAndPay` above). We decided not to redeploy to fix the label, so the true outside-payer count is the number `/proof` shows minus one. Check: open [`/proof`](https://mezher.vercel.app/proof) and subtract that one wallet.
+**Outside users so far: 0.** Every payment above comes from team wallets, including `0xeff1342219369dd9d8eabd0460fbac27c9e9abf4`. Check: [`/proof`](https://mezher.vercel.app/proof) separates team wallets from outside ones and reads the count live from the chain.
 
 ## Tests
 

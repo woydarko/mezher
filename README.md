@@ -129,7 +129,7 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 | Fully borrowed `pay` via relayer: 20 MUSD | [`0xbb14adf9…`](https://explorer.test.mezo.org/tx/0xbb14adf9d23f25d1bf5b1b9d9d1fb816c1d1a42bd2ae51b96efd090a6a77518c) |
 | Balance-only `pay` via relayer: 20 MUSD, a self-payment by the demo merchant wallet; no permit, it used the existing activation allowance | [`0x0b1cbd3b…`](https://explorer.test.mezo.org/tx/0x0b1cbd3b070911af42a36f4a45a9336cb11d3163186f134239ef769045fb9948) |
 
-**Outside users so far: 0.** `/proof` currently labels the wallet `0xeff1…abf4` as "outside", but it is a team wallet (it sent the `openAndPay` above). The real outside-payer count is the number `/proof` shows minus one. We chose not to redeploy for the label.
+**Outside users so far: 0.** Every payment above comes from team wallets, including `0xeff1…abf4`, and `/proof` labels them as team.
 
 ## Integrate
 
