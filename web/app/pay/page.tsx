@@ -25,7 +25,7 @@ import { RedemptionLine } from "@/components/RedemptionLine";
 import { StatusLine } from "@/components/StatusLine";
 import ui from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
-import { checkoutReducer, isSmartAccount, permitPlan, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
 import { formatMusd, formatRatio, toJson } from "@/lib/format";
 import { getBorrowHints } from "@/lib/hints";
 import { linkQuery, parseLink, type PayLink } from "@/lib/link";
@@ -219,12 +219,8 @@ function CheckoutFor({ link }: { link: PayLink }) {
         .waitForTransactionReceipt({ hash, timeout: 60_000 })
         // shortcut: Mezo RPC sometimes stalls this poll; one direct read after the timeout, then the error shows
         .catch(() => publicClient!.getTransactionReceipt({ hash }));
-      if (receipt.status === "success") {
-        dispatch({ type: "CONFIRMED" });
-        refetch();
-      } else {
-        dispatch({ type: "FAILED", code: "reverted" });
-      }
+      dispatch(receiptEvent(receipt.status));
+      if (receipt.status === "success") refetch();
     },
     [publicClient, refetch],
   );
@@ -496,7 +492,13 @@ function CheckoutFor({ link }: { link: PayLink }) {
   else if (activation.activated === undefined || smartAccount.data === undefined)
     gate = <StatusLine tone="info">Checking the shop and your wallet…</StatusLine>;
 
-  const staleLine = state.step === "failed" && state.error ? <StatusLine tone="error">{state.error}</StatusLine> : null;
+  // A hash here means a tx was mined and reverted: link the wallet so the payer can check before paying again.
+  const staleLine =
+    state.step === "failed" && state.error ? (
+      <StatusLine tone="error" href={state.hash && address && explorerAddress(address)}>
+        {state.error}
+      </StatusLine>
+    ) : null;
   // Shown whenever a borrow is needed, including when it is blocked, so the payer can lower a too-strict choice.
   const minIcrField =
     borrowWei > 0n ? (

@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { checkoutReducer, isSmartAccount, permitPlan, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
 import { BaseError, ContractFunctionRevertedError, encodeErrorResult } from "viem";
 import { errorCode, errorCopy } from "@/lib/errors";
 
@@ -62,6 +62,24 @@ describe("checkoutReducer", () => {
   it("stores the copy for a failure code", () => {
     const s = checkoutReducer({ step: "sending", address: A, permit, borrow }, { type: "FAILED", code: "rate_limited" });
     expect(s).toMatchObject({ step: "failed", error: errorCopy("rate_limited"), permit, borrow });
+  });
+
+  it("a mined revert tells the payer to check before paying again, since a front-run borrow reverts this way", () => {
+    const s = checkoutReducer({ step: "confirming", address: A, hash: "0x1" }, receiptEvent("reverted"));
+    expect(s.step).toBe("failed");
+    expect(s.hash).toBe("0x1"); // the page links the wallet's explorer page only when a tx was mined
+    expect(s.error).toBe(
+      "This transaction failed, but the shop may already have the borrowed part if your signature was used first. Check the shop's payments and your Trove debt before you pay again.",
+    );
+    expect(s.error).not.toContain("Nothing changed");
+  });
+
+  it("a successful receipt confirms the payment", () => {
+    expect(receiptEvent("success")).toEqual({ type: "CONFIRMED" });
+  });
+
+  it("keeps the plain reverted copy for the Trove actions and activation", () => {
+    expect(errorCopy("reverted")).toBe("Mezo rejected the transaction. Nothing changed. Refresh and try again.");
   });
 
   it("RESET returns to idle and keeps the address", () => {

@@ -17,6 +17,11 @@ const COPY: [match: string, copy: string][] = [
   ["TCR < CCR", "Mezo's total ratio is too low for this borrow. Try again later."],
   ["below_min_ratio", "Your Trove would drop below the minimum ratio you chose. Lower it, or pay less."],
   ["No collateral available to claim", "There is nothing left to claim. Refresh the page."],
+  // Before "reverted", which this also contains. Only the checkout's mined revert uses it (receiptEvent).
+  [
+    "pay_reverted",
+    "This transaction failed, but the shop may already have the borrowed part if your signature was used first. Check the shop's payments and your Trove debt before you pay again.",
+  ],
   ["reverted", "Mezo rejected the transaction. Nothing changed. Refresh and try again."],
   ["quote_changed", "Your Trove changed. Check the new numbers and press Pay again."],
   ["OrderAlreadySettled", "This order is already paid. Nothing was taken from you."],

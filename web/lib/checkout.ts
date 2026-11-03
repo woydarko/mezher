@@ -66,6 +66,11 @@ export function checkoutReducer(s: CheckoutState, e: CheckoutEvent): CheckoutSta
   }
 }
 
+/** A mined revert is not "nothing changed" here: a borrow signature front-run on its own reverts `pay` this way. */
+export function receiptEvent(status: "success" | "reverted"): CheckoutEvent {
+  return status === "success" ? { type: "CONFIRMED" } : { type: "FAILED", code: "pay_reverted" };
+}
+
 /** EIP-7702 delegation designator: the account is still an EOA that signs with ECDSA. */
 const DELEGATION_PREFIX = "0xef0100";
 
