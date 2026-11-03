@@ -74,6 +74,8 @@ contract MezherPayForkTest is Test {
     address internal payer;
     uint256 internal payerPk;
     address internal merchant = makeAddr("forkMerchant");
+    address internal treasury = makeAddr("forkTreasury");
+    uint256 internal constant FEE_BPS = 50;
     bytes32 internal orderId = bytes32(uint256(0x3f9a1c0d2b4e5f60));
 
     function setUp() public {
@@ -86,7 +88,13 @@ contract MezherPayForkTest is Test {
         // other contract in the flow stays real.
         vm.mockCall(address(PRICE_FEED), abi.encodeWithSelector(IPriceFeed.fetchPrice.selector), abi.encode(FORK_PRICE));
 
-        mezherPay = new MezherPay(IERC20(address(MUSD)), BOS, ITroveManager(address(TROVE_MANAGER)), PRICE_FEED);
+        mezherPay = new MezherPay(
+            IERC20(address(MUSD)), BOS, ITroveManager(address(TROVE_MANAGER)), PRICE_FEED, treasury, FEE_BPS
+        );
+
+        // The merchant grants the fee allowance once, ahead of any payment.
+        vm.prank(merchant);
+        MUSD.approve(address(mezherPay), type(uint256).max);
 
         (, string memory name, string memory version, uint256 chainId, address verifyingContract,,) =
             IEip712(address(BOS)).eip712Domain();
@@ -138,14 +146,42 @@ contract MezherPayForkTest is Test {
         });
     }
 
-    function _payment(address merchant_, uint256 amount, uint256 fromBalance)
+    function _order(address merchant_, uint256 amount, uint256 fromBalance, bytes32 orderId_)
         internal
         view
-        returns (MezherPay.Payment memory)
+        returns (MezherPay.Order memory)
     {
-        return MezherPay.Payment({
-            payer: payer, merchant: merchant_, amount: amount, fromBalance: fromBalance, orderId: orderId
+        return MezherPay.Order({
+            payer: payer,
+            merchant: merchant_,
+            amount: amount,
+            fromBalance: fromBalance,
+            minIcrAfter: 1.5e18,
+            orderId: orderId_,
+            deadline: block.timestamp + 15 minutes
         });
+    }
+
+    function _orderSig(MezherPay.Order memory o) internal view returns (bytes memory) {
+        bytes32 domain = keccak256(
+            abi.encode(
+                EIP712_DOMAIN_TYPEHASH, keccak256("MezherPay"), keccak256("2"), block.chainid, address(mezherPay)
+            )
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                mezherPay.ORDER_TYPEHASH(),
+                o.payer,
+                o.merchant,
+                o.amount,
+                o.fromBalance,
+                o.minIcrAfter,
+                o.orderId,
+                o.deadline
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(payerPk, keccak256(abi.encodePacked(hex"1901", domain, structHash)));
+        return abi.encodePacked(r, s, v);
     }
 
     function _totalDebt() internal view returns (uint256) {
@@ -155,28 +191,36 @@ contract MezherPayForkTest is Test {
     }
 
     function test_fork_split_5plus7() public {
-        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.Order memory o = _order(merchant, 12e18, 5e18, orderId);
+        uint256 deadline = o.deadline;
+        uint256 fee = mezherPay.feeOf(12e18);
         uint256 debtBefore = _totalDebt();
         uint256 expectedIncrease = 7e18 + BORROWER_OPS.getBorrowingFee(7e18);
 
         vm.expectEmit(true, true, true, true);
-        emit MezherPay.Paid(orderId, payer, merchant, 12e18, 5e18, 7e18);
-        mezherPay.pay(_payment(merchant, 12e18, 5e18), _permitSig(5e18, deadline), _borrowSig(7e18, merchant, deadline));
+        emit MezherPay.Paid(orderId, payer, merchant, 12e18, 5e18, 7e18, fee);
+        mezherPay.pay(o, _orderSig(o), _permitSig(5e18, deadline), _borrowSig(7e18, merchant, deadline));
 
-        assertEq(MUSD.balanceOf(merchant), 12e18, "merchant received the full amount");
+        assertEq(MUSD.balanceOf(merchant), 12e18 - fee, "merchant received the amount net of fee");
+        assertEq(MUSD.balanceOf(treasury), fee, "treasury received the fee");
+        assertEq(MUSD.balanceOf(address(mezherPay)), 0, "contract holds nothing");
         assertEq(MUSD.balanceOf(payer), 0, "payer spent its balance part");
         assertApproxEqAbs(_totalDebt() - debtBefore, expectedIncrease, 1e12, "debt up by borrow + fee");
     }
 
     function test_fork_replayBorrowSig_reverts() public {
-        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.Order memory o = _order(merchant, 7e18, 0, orderId);
+        uint256 deadline = o.deadline;
         MezherPay.BorrowSig memory borrow = _borrowSig(7e18, merchant, deadline);
 
-        mezherPay.pay(_payment(merchant, 7e18, 0), _permitSig(0, deadline), borrow);
+        mezherPay.pay(o, _orderSig(o), _permitSig(0, deadline), borrow);
 
+        // A fresh order id, so the revert comes from Mezo's nonce and not from the order replay guard.
+        MezherPay.Order memory o2 = _order(merchant, 7e18, 0, bytes32(uint256(orderId) + 1));
+        bytes memory sig2 = _orderSig(o2);
         MezherPay.PermitSig memory permit = _permitSig(0, deadline);
         vm.expectRevert();
-        mezherPay.pay(_payment(merchant, 7e18, 0), permit, borrow);
+        mezherPay.pay(o2, sig2, permit, borrow);
     }
 
     function test_fork_icrFloor() public {
@@ -186,11 +230,13 @@ contract MezherPayForkTest is Test {
         // Debt that puts ICR just under 150%: Mezo allows the borrow, MezherPay must reject it.
         uint256 debtAtFloor = coll * price / 1.5e18;
         uint256 borrowWei = debtAtFloor - _totalDebt() + 1e18;
+        MezherPay.Order memory o = _order(merchant, borrowWei, 0, orderId);
+        bytes memory sig = _orderSig(o);
         MezherPay.PermitSig memory permit = _permitSig(0, deadline);
         MezherPay.BorrowSig memory borrow = _borrowSig(borrowWei, merchant, deadline);
 
         vm.expectRevert();
-        mezherPay.pay(_payment(merchant, borrowWei, 0), permit, borrow);
+        mezherPay.pay(o, sig, permit, borrow);
 
         assertEq(MUSD.balanceOf(merchant), 0, "payment is atomic");
     }
@@ -199,12 +245,15 @@ contract MezherPayForkTest is Test {
         address relayer = makeAddr("relayer");
         address attacker = makeAddr("attacker");
         uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.Order memory o = _order(merchant, 7e18, 0, orderId);
+        bytes memory sig = _orderSig(o);
         MezherPay.BorrowSig memory borrow = _borrowSig(7e18, merchant, deadline);
         MezherPay.PermitSig memory permit = _permitSig(0, deadline);
+        o.merchant = attacker;
 
         vm.prank(relayer);
-        vm.expectRevert();
-        mezherPay.pay(_payment(attacker, 7e18, 0), permit, borrow);
+        vm.expectRevert(MezherPay.BadOrderSignature.selector);
+        mezherPay.pay(o, sig, permit, borrow);
 
         assertEq(MUSD.balanceOf(attacker), 0, "attacker unchanged");
         assertEq(MUSD.balanceOf(merchant), 0, "merchant unchanged");

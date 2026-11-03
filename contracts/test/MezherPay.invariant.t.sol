@@ -26,8 +26,17 @@ contract MezherPayHandler is Test {
     uint256 internal immutable payerPk;
     address public immutable merchant;
     address public immutable attacker;
+    uint256 internal immutable attackerPk;
+    address public immutable treasury;
+
+    uint256 internal nextOrderId;
+    MezherPay.Order[] internal settledOrders;
+    bytes[] internal settledSigs;
 
     uint256 public ghostPaid;
+    uint256 public ghostFees;
+    uint256 public ghostReplays;
+    uint256 public ghostUnmarked;
     uint256 public ghostFromBalance;
     uint256 public ghostDebt;
     uint256 public ghostBorrowsBelowFloor;
@@ -40,7 +49,38 @@ contract MezherPayHandler is Test {
         troveManager = troveManager_;
         (payer, payerPk) = makeAddrAndKey("payer");
         merchant = makeAddr("merchant");
-        attacker = makeAddr("attacker");
+        (attacker, attackerPk) = makeAddrAndKey("attacker");
+        treasury = mezherPay_.treasury();
+
+        // The merchant grants the fee allowance once, ahead of any payment.
+        vm.prank(merchant);
+        musd_.approve(address(mezherPay_), type(uint256).max);
+    }
+
+    function _orderSig(uint256 pk, MezherPay.Order memory o) internal view returns (bytes memory) {
+        bytes32 domain = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("MezherPay"),
+                keccak256("2"),
+                block.chainid,
+                address(mezherPay)
+            )
+        );
+        bytes32 structHash = keccak256(
+            abi.encode(
+                mezherPay.ORDER_TYPEHASH(),
+                o.payer,
+                o.merchant,
+                o.amount,
+                o.fromBalance,
+                o.minIcrAfter,
+                o.orderId,
+                o.deadline
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, keccak256(abi.encodePacked(hex"1901", domain, structHash)));
+        return abi.encodePacked(r, s, v);
     }
 
     function _permit(uint256 value, uint256 deadline) internal view returns (MezherPay.PermitSig memory) {
@@ -68,13 +108,19 @@ contract MezherPayHandler is Test {
         });
     }
 
-    function _payment(address to, uint256 amount, uint256 fromBalance)
+    function _order(address to, uint256 amount, uint256 fromBalance, uint256 deadline)
         internal
         view
-        returns (MezherPay.Payment memory)
+        returns (MezherPay.Order memory)
     {
-        return MezherPay.Payment({
-            payer: payer, merchant: to, amount: amount, fromBalance: fromBalance, orderId: bytes32(0)
+        return MezherPay.Order({
+            payer: payer,
+            merchant: to,
+            amount: amount,
+            fromBalance: fromBalance,
+            minIcrAfter: 1.5e18,
+            orderId: bytes32(nextOrderId),
+            deadline: deadline
         });
     }
 
@@ -89,10 +135,17 @@ contract MezherPayHandler is Test {
         MezherPay.PermitSig memory permit = _permit(fromBalance, deadline);
         MezherPay.BorrowSig memory borrow = _borrow(borrowed, merchant, deadline);
 
-        // Balance-only payments must come from the payer; borrowing ones go through the relayer.
-        if (borrowed == 0) vm.prank(payer);
-        try mezherPay.pay(_payment(merchant, amount, fromBalance), permit, borrow) {
+        MezherPay.Order memory o = _order(merchant, amount, fromBalance, deadline);
+        bytes memory sig = _orderSig(payerPk, o);
+        // Anyone may relay: alternate between the payer and a third party.
+        if (borrowed % 2 == 0) vm.prank(payer);
+        try mezherPay.pay(o, sig, permit, borrow) {
+            nextOrderId++;
+            settledOrders.push(o);
+            settledSigs.push(sig);
+            if (!mezherPay.settled(keccak256(abi.encode(o.payer, o.merchant, o.orderId)))) ghostUnmarked++;
             ghostPaid += amount;
+            ghostFees += mezherPay.feeOf(amount);
             ghostFromBalance += fromBalance;
             ghostDebt += borrowed + borrowed / bos.BORROWING_FEE_DIVISOR();
             if (borrowed > 0 && troveManager.icr() < mezherPay.MIN_ICR_AFTER()) ghostBorrowsBelowFloor++;
@@ -109,8 +162,10 @@ contract MezherPayHandler is Test {
         amount = bound(amount, 1, musd.balanceOf(payer) + 1);
         MezherPay.PermitSig memory permit = _permit(amount, block.timestamp + 15 minutes);
         MezherPay.BorrowSig memory borrow = _borrow(0, attacker, block.timestamp);
+        MezherPay.Order memory o = _order(attacker, amount, amount, block.timestamp + 15 minutes);
+        bytes memory sig = _orderSig(attackerPk, o);
         vm.prank(attacker);
-        try mezherPay.pay(_payment(attacker, amount, amount), permit, borrow) {
+        try mezherPay.pay(o, sig, permit, borrow) {
             ghostRedirects++;
         } catch {}
     }
@@ -121,9 +176,25 @@ contract MezherPayHandler is Test {
         uint256 deadline = block.timestamp + 15 minutes;
         MezherPay.PermitSig memory permit = _permit(0, deadline);
         MezherPay.BorrowSig memory borrow = _borrow(amount, merchant, deadline);
+        MezherPay.Order memory o = _order(attacker, amount, 0, deadline);
+        bytes memory sig = _orderSig(attackerPk, o);
         vm.prank(attacker);
-        try mezherPay.pay(_payment(attacker, amount, 0), permit, borrow) {
+        try mezherPay.pay(o, sig, permit, borrow) {
             ghostRedirects++;
+        } catch {}
+    }
+
+    /// @notice Anyone resubmits an order that already settled, with its valid signature.
+    function replay(uint256 index) external {
+        if (settledOrders.length == 0) return;
+        index = bound(index, 0, settledOrders.length - 1);
+        MezherPay.Order memory o = settledOrders[index];
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.PermitSig memory permit = _permit(o.fromBalance, deadline);
+        MezherPay.BorrowSig memory borrow = _borrow(o.amount - o.fromBalance, merchant, deadline);
+        vm.prank(attacker);
+        try mezherPay.pay(o, settledSigs[index], permit, borrow) {
+            ghostReplays++;
         } catch {}
     }
 }
@@ -145,7 +216,9 @@ contract MezherPayInvariantTest is Test {
             IERC20(address(musd)),
             IBorrowerOperationsSignatures(address(bos)),
             ITroveManager(address(troveManager)),
-            IPriceFeed(address(new MockPriceFeed()))
+            IPriceFeed(address(new MockPriceFeed())),
+            makeAddr("treasury"),
+            50
         );
         handler = new MezherPayHandler(mezherPay, musd, bos, troveManager);
         musd.mint(handler.payer(), START_BALANCE);
@@ -163,9 +236,25 @@ contract MezherPayInvariantTest is Test {
         assertEq(musd.balanceOf(address(mezherPay)), 0);
     }
 
-    /// @dev The merchant got exactly the sum of settled payments.
+    /// @dev Merchant plus treasury got exactly the sum of settled payments.
     function invariant_merchantGetsExactlyPaid() public view {
-        assertEq(musd.balanceOf(handler.merchant()), handler.ghostPaid());
+        assertEq(musd.balanceOf(handler.merchant()) + musd.balanceOf(handler.treasury()), handler.ghostPaid());
+    }
+
+    /// @dev The treasury got exactly the fees of settled payments, nothing more.
+    function invariant_treasuryGetsExactlyFees() public view {
+        assertEq(musd.balanceOf(handler.treasury()), handler.ghostFees());
+    }
+
+    /// @dev The merchant's net is the settled total minus the fees.
+    function invariant_merchantNetMatchesSettled() public view {
+        assertEq(musd.balanceOf(handler.merchant()), handler.ghostPaid() - handler.ghostFees());
+    }
+
+    /// @dev No settled order settled again, and every settled order was marked on-chain.
+    function invariant_noOrderSettledTwice() public view {
+        assertEq(handler.ghostReplays(), 0);
+        assertEq(handler.ghostUnmarked(), 0);
     }
 
     /// @dev The payer's balance only moved by the balance parts of settled payments.

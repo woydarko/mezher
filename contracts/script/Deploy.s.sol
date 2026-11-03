@@ -16,12 +16,17 @@ contract Deploy is Script {
     address internal constant PRICE_FEED = 0x86bCF0841622a5dAC14A313a15f96A95421b9366;
 
     function run() external returns (MezherPay mezherPay) {
+        address treasury = vm.envAddress("MEZHER_TREASURY");
+        uint256 feeBps = vm.envUint("MEZHER_FEE_BPS");
+
         vm.startBroadcast();
         mezherPay = new MezherPay(
             IERC20(MUSD),
             IBorrowerOperationsSignatures(BORROWER_OPS_SIGNATURES),
             ITroveManager(TROVE_MANAGER),
-            IPriceFeed(PRICE_FEED)
+            IPriceFeed(PRICE_FEED),
+            treasury,
+            feeBps
         );
         vm.stopBroadcast();
 
