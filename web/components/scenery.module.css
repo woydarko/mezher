@@ -35,3 +35,11 @@
     filter: url(#boil-wobble-2);
   }
 }
+
+/* Small screens keep the still frame: the boil alone held the main thread 20-26% busy at 360 px, 4x CPU throttle. */
+@media (max-width: 640px) {
+  .boilSketch,
+  .boilWobble {
+    animation: none;
+  }
+}
