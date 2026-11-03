@@ -534,4 +534,40 @@ contract MezherPayTest is Test {
         _pay(_order(payer, merchant, 12e18, 12e18));
         assertEq(musd.balanceOf(merchant) + musd.balanceOf(treasury), 12e18, "no borrow means no ICR guard");
     }
+
+    function _deployWithFee(uint256 feeBps) internal returns (MezherPay) {
+        return new MezherPay(
+            IERC20(address(musd)),
+            IBorrowerOperationsSignatures(address(bos)),
+            ITroveManager(address(troveManager)),
+            IPriceFeed(address(priceFeed)),
+            treasury,
+            feeBps
+        );
+    }
+
+    /// @dev With a zero fee nothing would be pulled back, so the MUSD would be locked in the contract.
+    function test_pay_rejectsContractAsMerchant() public {
+        mezherPay = _deployWithFee(0);
+        MezherPay.Order memory o = _order(payer, address(mezherPay), 12e18, 5e18);
+        _payRevert(o, abi.encodePacked(MezherPay.MerchantIsContract.selector));
+        assertEq(musd.balanceOf(address(mezherPay)), 0, "contract holds nothing");
+    }
+
+    function test_pay_zeroFee_paysMerchantInFullWithoutAllowance() public {
+        mezherPay = _deployWithFee(0);
+        address fresh = makeAddr("freshMerchant"); // never approved the contract
+        vm.expectEmit(true, true, true, true);
+        emit MezherPay.Paid(orderId, payer, fresh, 12e18, 5e18, 7e18, 0);
+        _pay(_order(payer, fresh, 12e18, 5e18));
+        assertEq(musd.balanceOf(fresh), 12e18, "merchant paid in full");
+        assertEq(musd.balanceOf(treasury), 0, "no fee moved");
+    }
+
+    function test_pay_succeedsAtExactDeadline() public {
+        MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
+        vm.warp(o.deadline);
+        _pay(o);
+        assertEq(musd.balanceOf(merchant) + musd.balanceOf(treasury), 12e18, "paid at deadline");
+    }
 }

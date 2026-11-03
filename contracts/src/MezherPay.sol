@@ -104,6 +104,8 @@ contract MezherPay is EIP712 {
     error MinIcrBelowFloor();
     /// @notice The fee exceeds `MAX_FEE_BPS`.
     error FeeTooHigh();
+    /// @notice The merchant is this contract, which would lock the MUSD.
+    error MerchantIsContract();
     /// @notice The payer's Trove would end below the order's `minIcrAfter`.
     /// @param icr The ICR after borrowing, 1e18 = 100%.
     error IcrBelowFloor(uint256 icr);
@@ -172,6 +174,7 @@ contract MezherPay is EIP712 {
     /// @dev Validates the order and its signature, then marks it settled (replay guard).
     function _settle(Order calldata o, bytes calldata orderSig) internal {
         if (o.payer == address(0) || o.merchant == address(0)) revert ZeroAddress();
+        if (o.merchant == address(this)) revert MerchantIsContract();
         if (o.amount == 0) revert ZeroAmount();
         if (o.fromBalance > o.amount) revert FromBalanceExceedsAmount();
         if (block.timestamp > o.deadline) revert OrderExpired();
