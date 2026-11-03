@@ -48,14 +48,18 @@ export function errorCopy(code: string): string {
   return hit ? hit[1] : "Something went wrong (" + code + "). Try again.";
 }
 
+/** Custom error name or require() string from a decoded revert. viem names a require string "Error"; the text is in `reason`. */
+export function revertName(revert: ContractFunctionRevertedError): string | undefined {
+  const name = revert.data?.errorName;
+  return name && name !== "Error" ? name : revert.reason;
+}
+
 /** Custom error name or revert string when the wallet surfaces one, else viem's short message. */
 export function errorCode(err: unknown): string {
   if (!(err instanceof BaseError)) return err instanceof Error ? err.message : "unknown";
   const revert = err.walk((e) => e instanceof ContractFunctionRevertedError);
   if (revert instanceof ContractFunctionRevertedError) {
-    // A require() string decodes as the built-in error "Error"; the text is in `reason`.
-    const name = revert.data?.errorName;
-    return (name && name !== "Error" ? name : revert.reason) ?? err.shortMessage;
+    return revertName(revert) ?? err.shortMessage;
   }
   return err.shortMessage;
 }

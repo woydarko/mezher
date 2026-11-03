@@ -1,8 +1,9 @@
 import type { Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { checkoutReducer, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isBitcoinConnector, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
 import { BaseError, ContractFunctionRevertedError, encodeErrorResult } from "viem";
 import { errorCode, errorCopy } from "@/lib/errors";
+import { revertReason } from "@/lib/relayer";
 
 const A = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
 const B = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -171,5 +172,31 @@ describe("errorCode with Mezo revert strings", () => {
 describe("below_min_ratio", () => {
   it("blames the payer's own minimum, not Mezo", () => {
     expect(errorCopy("below_min_ratio")).toBe("Your Trove would drop below the minimum ratio you chose. Lower it, or pay less.");
+  });
+});
+
+describe("revertReason", () => {
+  const abi = [{ type: "error", name: "Error", inputs: [{ name: "message", type: "string" }] }] as const;
+  const revertWith = (message: string) =>
+    new BaseError("call failed", {
+      cause: new ContractFunctionRevertedError({ abi, functionName: "pay", data: encodeErrorResult({ abi, errorName: "Error", args: [message] }) }),
+    });
+
+  it("returns the require string, not viem's generic name 'Error'", () => {
+    expect(revertReason(revertWith("Invalid signature"))).toBe("Invalid signature");
+  });
+  it("a failed simulation with Invalid signature gives the check-first copy", () => {
+    expect(errorCopy(revertReason(revertWith("Invalid signature")))).toMatch(/Check your Trove debt/);
+  });
+  it("rethrows anything that is not a revert", () => {
+    expect(() => revertReason(new Error("rpc down"))).toThrow("rpc down");
+  });
+});
+
+describe("isBitcoinConnector", () => {
+  it("flags only OrangeKit's connector type", () => {
+    expect(isBitcoinConnector("orangekit")).toBe(true);
+    expect(isBitcoinConnector("injected")).toBe(false);
+    expect(isBitcoinConnector(undefined)).toBe(false);
   });
 });

@@ -84,6 +84,12 @@ export async function isSmartAccount(client: { getCode(a: { address: Address }):
 }
 
 /**
+ * OrangeKit (Passport's Bitcoin wallets: Unisat, OKX, Xverse) throws "Unsupported method" on signTypedData, so it
+ * cannot sign the order or the permit, deployed account or not. Connector type "orangekit" in @mezo-org/passport.
+ */
+export const isBitcoinConnector = (connectorType: string | undefined) => connectorType === "orangekit";
+
+/**
  * Whether the payer must sign an MUSD permit for `fromBalanceWei`. ERC-2612 permit overwrites the allowance, so a
  * merchant paying from balance would replace its fee budget with the payment amount and spend it to 0. When the
  * existing allowance already covers it, the order goes with an empty permit (the contract's try/catch ignores it)

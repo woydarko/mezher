@@ -1,6 +1,7 @@
 // Server only: the relayer's clients and revert decoding, shared by /api/relay and /api/activate.
 import { BaseError, ContractFunctionRevertedError, createPublicClient, createWalletClient, http, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
+import { revertName } from "@/lib/errors";
 import { ADDRESSES, MEZO_TESTNET, mezherPayCallAbi, musdAbi } from "@/lib/mezo";
 
 // MezherPay and MUSD calls, with the MUSD errors, so a simulation names its revert.
@@ -21,5 +22,5 @@ export async function relayerBalanceWei(): Promise<bigint> {
 export function revertReason(err: unknown): string {
   const revert = err instanceof BaseError ? err.walk((e) => e instanceof ContractFunctionRevertedError) : null;
   if (!(revert instanceof ContractFunctionRevertedError)) throw err;
-  return revert.data?.errorName ?? revert.reason ?? revert.signature ?? "unknown";
+  return revertName(revert) ?? revert.signature ?? "unknown";
 }
