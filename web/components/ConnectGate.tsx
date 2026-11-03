@@ -9,8 +9,8 @@ import { StatusLine } from "./StatusLine";
 import g from "./gate.module.css";
 import { WalletButton } from "./WalletButton";
 
-/** Pages anyone can open without a wallet: the landing page and the terms. */
-export const PUBLIC_PATHS = ["/", "/terms"];
+/** Pages anyone can open without a wallet: the landing page, the terms, the try path and the proof. */
+export const PUBLIC_PATHS = ["/", "/terms", "/try", "/proof"];
 
 export function useIsPublicPath(): boolean {
   return PUBLIC_PATHS.includes(usePathname());

@@ -23,15 +23,16 @@ export function Header() {
           <span>Mezher</span>
         </Link>
         {/* the app pages need a wallet (ConnectGate), so their links appear once one is connected */}
-        {isConnected ? (
-          <nav className={styles.nav} aria-label="Main">
-            {link("/pay", "Pay")}
-            {link("/merchant", "Get paid")}
-            {link("/dashboard", "Dashboard")}
-          </nav>
-        ) : (
-          <span className={styles.navSpacer} />
-        )}
+        <nav className={styles.nav} aria-label="Main">
+          {link("/try", "Try it")}
+          {isConnected && (
+            <>
+              {link("/pay", "Pay")}
+              {link("/merchant", "Get paid")}
+              {link("/dashboard", "Dashboard")}
+            </>
+          )}
+        </nav>
         <WalletButton />
       </div>
     </header>

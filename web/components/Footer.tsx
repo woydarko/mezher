@@ -31,6 +31,7 @@ export function Footer() {
 
         <nav className={styles.footerLinks} aria-label="On-chain">
           <span className={styles.footerHeading}>On-chain</span>
+          <Link href="/proof">Live proof</Link>
           {ADDRESSES.mezherPay && (
             <a href={explorerAddress(ADDRESSES.mezherPay)} target="_blank" rel="noreferrer">
               MezherPay contract ↗
