@@ -145,9 +145,29 @@ export const borrowerOperationsAbi = [
     ],
     outputs: [],
   },
+  { type: "function", name: "refinancingFeePercentage", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
+  {
+    type: "function",
+    name: "refinance",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "_upperHint", type: "address" },
+      { name: "_lowerHint", type: "address" },
+    ],
+    outputs: [],
+  },
+  { type: "function", name: "claimCollateral", stateMutability: "nonpayable", inputs: [], outputs: [] },
 ] as const;
 
 export const troveManagerAbi = [
+  { type: "function", name: "collSurplusPool", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  {
+    type: "function",
+    name: "getTroveDebt",
+    stateMutability: "view",
+    inputs: [{ name: "_borrower", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
   {
     type: "function",
     name: "getTroveStatus",
@@ -223,7 +243,25 @@ export const hintHelpersAbi = [
   },
 ] as const;
 
+export const collSurplusPoolAbi = [
+  {
+    type: "function",
+    name: "getCollateral",
+    stateMutability: "view",
+    inputs: [{ name: "_account", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
+] as const;
+
 export const sortedTrovesAbi = [
+  { type: "function", name: "getLast", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  {
+    type: "function",
+    name: "getPrev",
+    stateMutability: "view",
+    inputs: [{ name: "_id", type: "address" }],
+    outputs: [{ type: "address" }],
+  },
   {
     type: "function",
     name: "findInsertPosition",

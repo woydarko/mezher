@@ -21,6 +21,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { RatioMeter } from "@/components/RatioMeter";
 import { ReceiptLine } from "@/components/ReceiptLine";
 import { SecondaryButton } from "@/components/SecondaryButton";
+import { RedemptionLine } from "@/components/RedemptionLine";
 import { StatusLine } from "@/components/StatusLine";
 import ui from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
@@ -39,12 +40,11 @@ import {
   mezherPayAbi,
   mezherPayCallAbi,
   musdAbi,
-  troveManagerAbi,
 } from "@/lib/mezo";
 import { errorCode } from "@/lib/errors";
 import { readQuoteInputs } from "@/lib/quote-read";
 import { fetchPaidLogs, settledKey } from "@/lib/paid-logs";
-import { UI_ICR_FLOOR_E18, icrE18, quote, type TroveState } from "@/lib/quote";
+import { UI_ICR_FLOOR_E18, icrE18, quote } from "@/lib/quote";
 import { openTroveTypedData, orderTypedData, permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
 import p from "./pay.module.css";
 
@@ -582,6 +582,8 @@ function CheckoutFor({ link }: { link: PayLink }) {
               />
             </Card>
           )}
+
+          <RedemptionLine payer={payer} enabled={trove?.status === 1 && borrowWei > 0n} />
 
           {q?.state === "ok" && (
             <Card>

@@ -9,8 +9,10 @@ import { Card } from "@/components/Card";
 import { CrayonBarChart, SplitBar, StatGrid, StatTile } from "@/components/Charts";
 import { PaymentsTable } from "@/components/PaymentsTable";
 import { RatioMeter } from "@/components/RatioMeter";
+import { RedemptionLine } from "@/components/RedemptionLine";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
+import { ClosedTrove, RefinanceAction } from "@/components/TroveActions";
 import styles from "@/components/ui.module.css";
 import { WalletButton } from "@/components/WalletButton";
 import { formatMusd } from "@/lib/format";
@@ -114,6 +116,7 @@ function PayerTab({ address }: { address: Address }) {
     trove = { collWei: coll, debtWei: principal + interest + pendingPrincipal + pendingInterest };
   }
   const price = reads.data?.[2];
+  const status = reads.data ? Number(reads.data[0]) : 0;
   const s = q.data && summarize(q.data.logs);
 
   return (
@@ -121,7 +124,8 @@ function PayerTab({ address }: { address: Address }) {
       <Card title="Your Trove">
         {reads.isLoading && <StatusLine tone="info">Reading your Trove…</StatusLine>}
         {reads.isError && <StatusLine tone="error">Can&apos;t reach Mezo testnet. Retrying every 15 seconds.</StatusLine>}
-        {reads.data && !trove && (
+        {(status === 3 || status === 4) && <ClosedTrove address={address} status={status} onDone={() => void reads.refetch()} />}
+        {reads.data && !trove && status !== 3 && status !== 4 && (
           <>
             <p>You don&apos;t have a Trove yet. Open one from any checkout, or on Mezo.</p>
             <SecondaryButton href="https://testnet.mezo.org">Open a Trove on Mezo</SecondaryButton>
@@ -145,6 +149,8 @@ function PayerTab({ address }: { address: Address }) {
               />
             </StatGrid>
             <RatioMeter nowE18={icrE18(trove.collWei, price, trove.debtWei)} afterE18={icrE18(trove.collWei, price, trove.debtWei)} />
+            <RedemptionLine payer={address} enabled className={d.note} />
+            <RefinanceAction address={address} trove={trove} priceE18={price} noteClass={d.note} onDone={() => void reads.refetch()} />
           </>
         )}
         {reads.data && <p className={d.note}>MUSD in your wallet: {formatMusd(reads.data[3])} MUSD</p>}
