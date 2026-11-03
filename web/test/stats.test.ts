@@ -8,14 +8,14 @@ const A = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3" as Address;
 const B = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2" as Address;
 const DAY = 86_400;
 
-const log = (payer: Address, merchant: Address, amount: bigint, fromBalance: bigint): PaidLog => ({
+const log = (payer: Address, merchant: Address, amount: bigint, fromBalance: bigint, feeWei = 0n): PaidLog => ({
   orderId: ("0x" + "0".repeat(64)) as Hex,
   payer,
   merchant,
   amountWei: amount,
   fromBalanceWei: fromBalance,
   borrowedWei: amount - fromBalance,
-  feeWei: 0n,
+  feeWei,
   txHash: ("0x" + "1".repeat(64)) as Hex,
   blockNumber: 1n,
 });
@@ -29,9 +29,16 @@ describe("summarize", () => {
       avgWei: 6n * E18,
       fromBalanceWei: 8n * E18,
       borrowedWei: 10n * E18,
+      feeWei: 0n,
       uniquePayers: 2,
       uniqueMerchants: 2,
     });
+  });
+
+  it("sums the fee, so a merchant's net is total minus fee", () => {
+    const s = summarize([log(A, B, 20n * E18, 8n * E18, 10n ** 17n), log(A, B, 4n * E18, 4n * E18, 2n * 10n ** 16n)]);
+    expect(s.feeWei).toBe(12n * 10n ** 16n);
+    expect(s.totalWei - s.feeWei).toBe(24n * E18 - 12n * 10n ** 16n);
   });
 
   it("is all zeros for no payments, without dividing by zero", () => {

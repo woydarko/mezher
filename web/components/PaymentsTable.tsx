@@ -17,6 +17,7 @@ export function PaymentsTable({ logs, show = "payer" }: { logs: PaidLog[]; show?
           <th scope="col">Order</th>
           <th scope="col">{party}</th>
           <th scope="col">Split</th>
+          {show === "payer" && <th scope="col">Fee</th>}
           <th scope="col">
             <span className={styles.srOnly}>Transaction</span>
           </th>
@@ -39,6 +40,11 @@ export function PaymentsTable({ logs, show = "payer" }: { logs: PaidLog[]; show?
             <td className="mono" data-label="Split">
               {formatMusd(l.fromBalanceWei)} bal / {formatMusd(l.borrowedWei)} borrow
             </td>
+            {show === "payer" && (
+              <td className="mono" data-label="Fee">
+                {formatMusd(l.feeWei)} MUSD
+              </td>
+            )}
             <td data-label="Tx">
               <a href={explorerTx(l.txHash)} target="_blank" rel="noreferrer" aria-label="View on explorer">
                 <Doodle name="external" className={styles.icon} />

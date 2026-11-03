@@ -47,8 +47,8 @@ function usePayments(key: string, filter: Filter, enabled: boolean) {
   });
 }
 
-function days(logs: PaidLog[], times: Map<bigint, number>) {
-  const points = logs.map((l) => ({ timestampSec: times.get(l.blockNumber) ?? 0, amountWei: l.amountWei }));
+function days(logs: PaidLog[], times: Map<bigint, number>, net = false) {
+  const points = logs.map((l) => ({ timestampSec: times.get(l.blockNumber) ?? 0, amountWei: net ? l.amountWei - l.feeWei : l.amountWei }));
   return dailyTotals(points, DAYS, Math.floor(Date.now() / 1000));
 }
 
@@ -67,13 +67,13 @@ function MerchantTab({ address }: { address: Address }) {
       {s && q.data && (
         <>
           <StatGrid>
-            <StatTile label="Received" value={formatMusd(s.totalWei)} unit="MUSD" />
+            <StatTile label="Received" value={formatMusd(s.totalWei - s.feeWei)} unit="MUSD" sub={"after " + formatMusd(s.feeWei) + " MUSD in fees"} />
             <StatTile label="Payments" value={s.count} />
             <StatTile label="Average payment" value={formatMusd(s.avgWei)} unit="MUSD" />
             <StatTile label="Customers" value={s.uniquePayers} sub="unique payer wallets" />
           </StatGrid>
           <Card title={"Received per day, last " + DAYS + " days"}>
-            <CrayonBarChart days={days(q.data.logs, q.data.times)} label="MUSD received per day" />
+            <CrayonBarChart days={days(q.data.logs, q.data.times, true)} label="MUSD received per day, after fees" />
           </Card>
           <Card title="Where the money came from">
             <p>The part your customers didn&apos;t have in MUSD was borrowed against their BTC, straight to you.</p>

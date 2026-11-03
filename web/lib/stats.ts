@@ -9,6 +9,8 @@ export type Summary = {
   avgWei: bigint;
   fromBalanceWei: bigint;
   borrowedWei: bigint;
+  /** Fees charged to merchants: a merchant received totalWei minus this. */
+  feeWei: bigint;
   uniquePayers: number;
   uniqueMerchants: number;
 };
@@ -18,12 +20,14 @@ export function summarize(logs: PaidLog[]): Summary {
   let totalWei = 0n;
   let fromBalanceWei = 0n;
   let borrowedWei = 0n;
+  let feeWei = 0n;
   const payers = new Set<string>();
   const merchants = new Set<string>();
   for (const l of logs) {
     totalWei += l.amountWei;
     fromBalanceWei += l.fromBalanceWei;
     borrowedWei += l.borrowedWei;
+    feeWei += l.feeWei;
     payers.add(l.payer.toLowerCase());
     merchants.add(l.merchant.toLowerCase());
   }
@@ -33,6 +37,7 @@ export function summarize(logs: PaidLog[]): Summary {
     avgWei: logs.length > 0 ? totalWei / BigInt(logs.length) : 0n,
     fromBalanceWei,
     borrowedWei,
+    feeWei,
     uniquePayers: payers.size,
     uniqueMerchants: merchants.size,
   };
