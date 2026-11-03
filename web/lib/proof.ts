@@ -9,11 +9,18 @@ export function parseTeamWallets(env: string | undefined): Address[] {
   return (env ?? "")
     .split(",")
     .map((s) => s.trim())
-    .filter((s) => isAddress(s))
+    .filter((s) => isAddress(s, { strict: false }))
     .map((s) => getAddress(s));
 }
 
-export const TEAM_WALLETS: Address[] = [...BASE_TEAM, ...parseTeamWallets(process.env.NEXT_PUBLIC_TEAM_WALLETS)];
+/** The demo merchant is ours too: every /try payment goes to it. */
+export const buildTeamWallets = (teamEnv: string | undefined, demoMerchant: string | undefined): Address[] => [
+  ...BASE_TEAM,
+  ...parseTeamWallets(teamEnv),
+  ...parseTeamWallets(demoMerchant),
+];
+
+export const TEAM_WALLETS: Address[] = buildTeamWallets(process.env.NEXT_PUBLIC_TEAM_WALLETS, process.env.NEXT_PUBLIC_DEMO_MERCHANT);
 
 export const isTeam = (a: Address, team: Address[] = TEAM_WALLETS) => team.some((t) => t.toLowerCase() === a.toLowerCase());
 

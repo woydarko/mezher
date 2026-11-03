@@ -1,7 +1,7 @@
 import type { Address, Hex } from "viem";
 import { describe, expect, it } from "vitest";
 import type { PaidLog } from "@/lib/paid-logs";
-import { parseTeamWallets, summarizeProof, TEAM_WALLETS } from "@/lib/proof";
+import { buildTeamWallets, parseTeamWallets, summarizeProof, TEAM_WALLETS } from "@/lib/proof";
 import { tryScenario } from "@/lib/try";
 
 const TEAM = TEAM_WALLETS[0]!;
@@ -45,6 +45,16 @@ describe("parseTeamWallets", () => {
   it("keeps valid addresses, drops junk, checksums", () => {
     expect(parseTeamWallets(` ${OUT1.toLowerCase()}, nope ,0x123,`)).toEqual([OUT1]);
     expect(parseTeamWallets(undefined)).toEqual([]);
+  });
+  it("accepts a mixed-case address with a wrong checksum instead of dropping it", () => {
+    const mixed = "0x" + OUT1.slice(2).toUpperCase(); // fails the strict checksum
+    expect(parseTeamWallets(mixed)).toEqual([OUT1]);
+  });
+  it("counts the demo merchant as team", () => {
+    const team = buildTeamWallets(undefined, OUT2.toLowerCase());
+    expect(team).toContain(OUT2);
+    expect(summarizeProof([log(OUT1, OUT2)], team).outsideMerchants).toEqual([]);
+    expect(buildTeamWallets(undefined, undefined)).toEqual(TEAM_WALLETS.slice(0, 1));
   });
 });
 

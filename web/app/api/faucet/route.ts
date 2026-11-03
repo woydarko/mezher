@@ -7,8 +7,18 @@ export const runtime = "nodejs";
 
 const client = createPublicClient({ chain: MEZO_TESTNET, transport: http() });
 // Its own key, never the relayer's. Server only, never logged.
-const key = process.env.FAUCET_PRIVATE_KEY as Hex | undefined;
-const account = key ? privateKeyToAccount(key) : undefined;
+function loadAccount() {
+  const key = process.env.FAUCET_PRIVATE_KEY as Hex | undefined;
+  if (!key) return undefined;
+  try {
+    return privateKeyToAccount(key);
+  } catch {
+    // a malformed key reads as unset; never print the key or viem's message
+    console.info(JSON.stringify({ route: "/api/faucet", error: "invalid_faucet_key" }));
+    return undefined;
+  }
+}
+const account = loadAccount();
 const wallet = account ? createWalletClient({ account, chain: MEZO_TESTNET, transport: http() }) : undefined;
 
 const handler = createFaucetHandler({

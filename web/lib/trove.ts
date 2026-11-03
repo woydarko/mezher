@@ -48,3 +48,15 @@ export function roundUpCents(wei: bigint): bigint {
   const cent = 10n ** 16n;
   return ((wei + cent - 1n) / cent) * cent;
 }
+
+/** 250%: the checkout's pre-filled ratio, room for a few payments before the 150% floor. */
+export const SUGGESTED_RATIO_E18 = 25n * 10n ** 17n;
+/** 0.1%, only to pre-fill the collateral field; the real fee is read on-chain. */
+export const FEE_ESTIMATE_E18 = 10n ** 15n;
+
+/** The collateral the checkout pre-fills for `debtWei`: 250% of debt + estimated fee + gas compensation, up to 4 decimals. */
+export function suggestedCollWei(debtWei: bigint, priceE18: bigint): bigint {
+  const total = debtWei + (debtWei * FEE_ESTIMATE_E18) / 10n ** 18n + GAS_COMPENSATION_WEI;
+  const step = 10n ** 14n;
+  return ((collateralFor(total, priceE18, SUGGESTED_RATIO_E18) + step - 1n) / step) * step;
+}

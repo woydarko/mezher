@@ -15,8 +15,8 @@ import { fetchOpenedTxs, isTeam, summarizeProof, TEAM_WALLETS } from "@/lib/proo
 
 // The first Mezher contract (v1) payments, kept as evidence in docs/evidence.md.
 const V1_TXS = [
-  { label: "13 MUSD, all borrowed, from the live site", hash: "0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0" },
-  { label: "11 MUSD, borrowed, local run", hash: "0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5" },
+  { label: "13 MUSD, all borrowed, paid on the live site by the team", hash: "0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0" },
+  { label: "11 MUSD, borrowed, team local run", hash: "0xdb3bc15e4e65c0756eb81c49f91ee1490a568d2fbfc2601a9b5b6b86c2607eb5" },
 ] as const;
 
 const short = (a: string) => a.slice(0, 6) + "…" + a.slice(-4);
@@ -115,7 +115,10 @@ export default function ProofPage() {
       )}
 
       <Card title="First version (v1) proof transactions">
-        <p>Made with the earlier contract, so they are not in the list above.</p>
+        <p>
+          Made with the earlier contract, so they are not in the list above. Both were our own demo payments from a
+          team wallet, not outside use.
+        </p>
         <ul>
           {V1_TXS.map((t) => (
             <li key={t.hash}>

@@ -5,7 +5,7 @@ import { parseUnits, type Address } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { formatMusd, formatRatio } from "@/lib/format";
 import { ADDRESSES, MEZO_TESTNET, borrowerOperationsAbi } from "@/lib/mezo";
-import { GAS_COMPENSATION_WEI, MIN_NET_DEBT_WEI, collateralFor, openTroveQuote, roundUpCents } from "@/lib/trove";
+import { MIN_NET_DEBT_WEI, openTroveQuote, roundUpCents, suggestedCollWei } from "@/lib/trove";
 import { Card } from "./Card";
 import { Field } from "./Field";
 import { PrimaryButton } from "./PrimaryButton";
@@ -14,8 +14,6 @@ import { SecondaryButton } from "./SecondaryButton";
 import { StatusLine } from "./StatusLine";
 
 const DECIMAL_RE = /^\d+(\.\d{1,18})?$/;
-const SUGGESTED_RATIO_E18 = 25n * 10n ** 17n; // 250%: room for a few payments before the 150% floor
-const FEE_ESTIMATE_E18 = 10n ** 15n; // 0.1%, only to pre-fill the collateral field; the real fee is read on-chain
 const OPEN_ON_MEZO = "https://testnet.mezo.org";
 
 const toWei = (s: string) => (DECIMAL_RE.test(s) ? parseUnits(s, 18) : null);
@@ -55,10 +53,7 @@ export function OpenTroveCard({
   const needWei = roundUpCents(shortfallWei);
   const firstDebt = needWei > MIN_NET_DEBT_WEI ? needWei : MIN_NET_DEBT_WEI;
   const [debt, setDebt] = useState(() => formatMusd(firstDebt, 2).replace(/,/g, ""));
-  const [coll, setColl] = useState(() => {
-    const total = firstDebt + (firstDebt * FEE_ESTIMATE_E18) / 10n ** 18n + GAS_COMPENSATION_WEI;
-    return btcUp(collateralFor(total, priceE18, SUGGESTED_RATIO_E18));
-  });
+  const [coll, setColl] = useState(() => btcUp(suggestedCollWei(firstDebt, priceE18)));
 
   const debtWei = toWei(debt);
   const collWei = toWei(coll);
