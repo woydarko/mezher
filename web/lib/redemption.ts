@@ -4,7 +4,7 @@ import { GAS_COMPENSATION_WEI } from "./trove";
 
 type ReadClient = { readContract: PublicClient["readContract"] };
 
-export type RedemptionAhead = { debtAheadWei: bigint; positionFromRisk: number; truncated: boolean };
+export type RedemptionAhead = { debtAheadWei: bigint; positionFromRisk: number; truncated: boolean; found: boolean };
 
 /**
  * Redemptions take Troves from SortedTroves.getLast() (lowest NICR) upward via getPrev.
@@ -15,9 +15,9 @@ export async function redemptionAhead(client: ReadClient, payer: Address, maxSte
   let cur = await client.readContract({ ...st, functionName: "getLast" });
   let debtAheadWei = 0n;
   for (let i = 0; ; i++) {
-    if (cur === zeroAddress) return { debtAheadWei: 0n, positionFromRisk: 0, truncated: false }; // payer not in the list
-    if (cur.toLowerCase() === payer.toLowerCase()) return { debtAheadWei, positionFromRisk: i, truncated: false };
-    if (i === maxSteps) return { debtAheadWei, positionFromRisk: i, truncated: true };
+    if (cur === zeroAddress) return { debtAheadWei: 0n, positionFromRisk: 0, truncated: false, found: false }; // payer not in the list
+    if (cur.toLowerCase() === payer.toLowerCase()) return { debtAheadWei, positionFromRisk: i, truncated: false, found: true };
+    if (i === maxSteps) return { debtAheadWei, positionFromRisk: i, truncated: true, found: false };
     const [debt, prev] = await Promise.all([
       client.readContract({ address: ADDRESSES.troveManager, abi: troveManagerAbi, functionName: "getTroveDebt", args: [cur] }),
       client.readContract({ ...st, functionName: "getPrev", args: [cur] }),

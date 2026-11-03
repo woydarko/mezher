@@ -17,7 +17,7 @@ export function RedemptionLine({ payer, enabled, className }: { payer: Address; 
     retry: false,
     queryFn: () => redemptionAhead(client!, payer),
   });
-  if (!q.data) return null;
+  if (!q.data || (!q.data.found && !q.data.truncated)) return null; // not in the list: say nothing rather than guess
   const { debtAheadWei, truncated } = q.data;
   const ahead = (truncated ? "At least " : "") + formatMusd(debtAheadWei) + " MUSD";
   return (

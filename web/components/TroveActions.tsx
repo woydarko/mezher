@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import type { Address, Hex } from "viem";
 import { usePublicClient, useWriteContract } from "wagmi";
@@ -20,7 +20,8 @@ const FEE_RATE_E18 = 10n ** 15n; // Mezo's 0.1% borrowing fee
 type Tx = { phase: "idle" | "wallet" | "pending" | "done" | "error"; hash?: Hex; error?: string };
 
 /** One wallet-sent Mezo call: wait for the receipt (same check as /pay), then refetch. */
-function useTroveTx(onDone: () => void) {
+function useTroveTx(onDone: () => Promise<unknown> | void, refreshKey: string) {
+  const queryClient = useQueryClient();
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
   const { writeContractAsync } = useWriteContract();
   const [tx, setTx] = useState<Tx>({ phase: "idle" });
@@ -35,8 +36,9 @@ function useTroveTx(onDone: () => void) {
         // shortcut: Mezo RPC sometimes stalls this poll; one direct read after the timeout, as on /pay
         .catch(() => publicClient!.getTransactionReceipt({ hash }));
       if (receipt.status !== "success") return setTx({ phase: "error", hash, error: errorCopy("reverted") });
+      // Stay busy until fresh data is in, so a second click cannot repeat the call on stale numbers.
+      await Promise.all([queryClient.invalidateQueries({ queryKey: [refreshKey] }), onDone()]);
       setTx({ phase: "done", hash });
-      onDone();
     } catch (err) {
       setTx({ phase: "error", error: errorCopy(errorCode(err)) });
     }
@@ -73,9 +75,9 @@ export function RefinanceAction({
   trove: { collWei: bigint; debtWei: bigint };
   priceE18: bigint;
   noteClass?: string;
-  onDone: () => void;
+  onDone: () => Promise<unknown> | void;
 }) {
-  const t = useTroveTx(onDone);
+  const t = useTroveTx(onDone, "trove-limits");
   const info = useQuery({
     queryKey: ["trove-limits", address],
     enabled: Boolean(t.publicClient),
@@ -119,8 +121,8 @@ export function RefinanceAction({
 }
 
 /** Troves closed by liquidation (3) or redemption (4) can leave BTC in the surplus pool for the owner to claim. */
-export function ClosedTrove({ address, status, onDone }: { address: Address; status: 3 | 4; onDone: () => void }) {
-  const t = useTroveTx(onDone);
+export function ClosedTrove({ address, status, onDone }: { address: Address; status: 3 | 4; onDone: () => Promise<unknown> | void }) {
+  const t = useTroveTx(onDone, "coll-surplus");
   const surplus = useQuery({
     queryKey: ["coll-surplus", address],
     enabled: Boolean(t.publicClient),

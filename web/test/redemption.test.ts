@@ -28,7 +28,7 @@ const LIST = [1, 2, 3, 4].map((n) => ({ id: a(n), debtWei: BigInt(n) * 1000n * E
 describe("redemptionAhead", () => {
   it("returns 0 debt ahead for the lowest-ratio Trove", async () => {
     const { client } = listClient(LIST);
-    expect(await redemptionAhead(client, a(1))).toEqual({ debtAheadWei: 0n, positionFromRisk: 0, truncated: false });
+    expect(await redemptionAhead(client, a(1))).toEqual({ debtAheadWei: 0n, positionFromRisk: 0, truncated: false, found: true });
   });
 
   it("sums the debt of every lower-ratio Trove", async () => {
@@ -37,12 +37,13 @@ describe("redemptionAhead", () => {
       debtAheadWei: 3000n * E18,
       positionFromRisk: 2,
       truncated: false,
+      found: true,
     });
   });
 
   it("marks truncated when it stops at maxSteps", async () => {
     const { client } = listClient(LIST);
-    expect(await redemptionAhead(client, a(4), 2)).toEqual({ debtAheadWei: 3000n * E18, positionFromRisk: 2, truncated: true });
+    expect(await redemptionAhead(client, a(4), 2)).toEqual({ debtAheadWei: 3000n * E18, positionFromRisk: 2, truncated: true, found: false });
   });
 
   it("finds the payer exactly at the maxSteps boundary", async () => {
@@ -50,9 +51,14 @@ describe("redemptionAhead", () => {
     expect(await redemptionAhead(client, a(3), 2)).toMatchObject({ positionFromRisk: 2, truncated: false });
   });
 
-  it("returns zeros when the payer is not in the list", async () => {
+  it("reports found: false with zeros when the payer is not in the list", async () => {
     const { client } = listClient(LIST);
-    expect(await redemptionAhead(client, a(9))).toEqual({ debtAheadWei: 0n, positionFromRisk: 0, truncated: false });
+    expect(await redemptionAhead(client, a(9))).toEqual({
+      debtAheadWei: 0n,
+      positionFromRisk: 0,
+      truncated: false,
+      found: false,
+    });
   });
 });
 

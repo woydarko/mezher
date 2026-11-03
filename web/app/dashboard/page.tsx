@@ -124,7 +124,7 @@ function PayerTab({ address }: { address: Address }) {
       <Card title="Your Trove">
         {reads.isLoading && <StatusLine tone="info">Reading your Trove…</StatusLine>}
         {reads.isError && <StatusLine tone="error">Can&apos;t reach Mezo testnet. Retrying every 15 seconds.</StatusLine>}
-        {(status === 3 || status === 4) && <ClosedTrove address={address} status={status} onDone={() => void reads.refetch()} />}
+        {(status === 3 || status === 4) && <ClosedTrove address={address} status={status} onDone={() => reads.refetch()} />}
         {reads.data && !trove && status !== 3 && status !== 4 && (
           <>
             <p>You don&apos;t have a Trove yet. Open one from any checkout, or on Mezo.</p>
@@ -150,7 +150,7 @@ function PayerTab({ address }: { address: Address }) {
             </StatGrid>
             <RatioMeter nowE18={icrE18(trove.collWei, price, trove.debtWei)} afterE18={icrE18(trove.collWei, price, trove.debtWei)} />
             <RedemptionLine payer={address} enabled className={d.note} />
-            <RefinanceAction address={address} trove={trove} priceE18={price} noteClass={d.note} onDone={() => void reads.refetch()} />
+            <RefinanceAction address={address} trove={trove} priceE18={price} noteClass={d.note} onDone={() => reads.refetch()} />
           </>
         )}
         {reads.data && <p className={d.note}>MUSD in your wallet: {formatMusd(reads.data[3])} MUSD</p>}
