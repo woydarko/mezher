@@ -46,6 +46,15 @@ contract MezherPay is EIP712 {
         bytes signature;
     }
 
+    /// @notice Mezo `OpenTrove` signature and Trove hints for `openAndPay`; `debtAmount` is the MUSD the payer receives.
+    struct OpenSig {
+        uint256 debtAmount;
+        address upperHint;
+        address lowerHint;
+        uint256 deadline;
+        bytes signature;
+    }
+
     /// @notice EIP-712 typehash of `Order`.
     bytes32 public constant ORDER_TYPEHASH = keccak256(
         "Order(address payer,address merchant,uint256 amount,uint256 fromBalance,uint256 minIcrAfter,bytes32 orderId,uint256 deadline)"
@@ -88,6 +97,12 @@ contract MezherPay is EIP712 {
         uint256 fee
     );
 
+    /// @notice Emitted when `openAndPay` opened the payer's Trove, right before `Paid`.
+    /// @param payer Owner of the new Trove.
+    /// @param collateral BTC (wei) sent as the Trove's collateral.
+    /// @param debtAmount MUSD the Trove paid out to the payer, before Mezo's fee and gas compensation.
+    event OpenedAtCheckout(address indexed payer, uint256 collateral, uint256 debtAmount);
+
     /// @notice A required address was zero.
     error ZeroAddress();
     /// @notice The payment amount was zero.
@@ -106,6 +121,8 @@ contract MezherPay is EIP712 {
     error FeeTooHigh();
     /// @notice The merchant is this contract, which would lock the MUSD.
     error MerchantIsContract();
+    /// @notice `openAndPay` needs the whole amount paid from the balance the new Trove mints.
+    error OpenMustPayFromBalance();
     /// @notice The payer's Trove would end below the order's `minIcrAfter`.
     /// @param icr The ICR after borrowing, 1e18 = 100%.
     error IcrBelowFloor(uint256 icr);
@@ -169,6 +186,34 @@ contract MezherPay is EIP712 {
 
         uint256 fee = _collectFee(o);
         emit Paid(o.orderId, o.payer, o.merchant, o.amount, o.fromBalance, borrowed, fee);
+    }
+
+    /// @notice Opens the payer's Trove with the BTC sent along, then pays `o.amount` to the merchant from the
+    ///         MUSD the Trove minted to the payer. Everything above `o.amount` stays with the payer.
+    /// @dev The contract never holds MUSD or BTC: the BTC goes straight into the Trove and the MUSD moves
+    ///      payer to merchant through the permit. Mezo's signature binds `msg.value` as `assetAmount`.
+    /// @param o The order; `o.fromBalance` must equal `o.amount`.
+    /// @param orderSig EIP-712 signature of `o` by `o.payer`.
+    /// @param permit MUSD permit signed by `o.payer` for `o.amount`.
+    /// @param open `OpenTrove` signature by `o.payer` (borrower and recipient both `o.payer`) and hints.
+    function openAndPay(Order calldata o, bytes calldata orderSig, PermitSig calldata permit, OpenSig calldata open)
+        external
+        payable
+    {
+        _settle(o, orderSig);
+        if (o.fromBalance != o.amount) revert OpenMustPayFromBalance();
+
+        bos.openTroveWithSignature{value: msg.value}(
+            open.debtAmount, open.upperHint, open.lowerHint, o.payer, o.payer, open.signature, open.deadline
+        );
+        _takeBalance(o, permit);
+
+        uint256 icr = troveManager.getCurrentICR(o.payer, priceFeed.fetchPrice());
+        if (icr < o.minIcrAfter) revert IcrBelowFloor(icr);
+
+        uint256 fee = _collectFee(o);
+        emit OpenedAtCheckout(o.payer, msg.value, open.debtAmount);
+        emit Paid(o.orderId, o.payer, o.merchant, o.amount, o.fromBalance, 0, fee);
     }
 
     /// @dev Validates the order and its signature, then marks it settled (replay guard).

@@ -570,4 +570,93 @@ contract MezherPayTest is Test {
         _pay(o);
         assertEq(musd.balanceOf(merchant) + musd.balanceOf(treasury), 12e18, "paid at deadline");
     }
+
+    // --- openAndPay ---
+
+    uint256 internal constant OPEN_COLL = 0.1 ether;
+    uint256 internal constant OPEN_DEBT = 2_000e18;
+
+    /// @dev Signs Mezo's `OpenTrove` message with `pk` over the MockBorrowerOps domain.
+    function _openSig(uint256 pk, uint256 assetAmount, uint256 debtAmount, address borrower, uint256 deadline)
+        internal
+        view
+        returns (MezherPay.OpenSig memory)
+    {
+        bytes32 structHash = keccak256(
+            abi.encodePacked(
+                bos.OPEN_TROVE_TYPEHASH(),
+                abi.encode(assetAmount, debtAmount, borrower, borrower),
+                bos.getNonce(borrower),
+                deadline
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(pk, keccak256(abi.encodePacked(hex"1901", bos.DOMAIN_SEPARATOR(), structHash)));
+        return MezherPay.OpenSig({
+            debtAmount: debtAmount,
+            upperHint: address(0),
+            lowerHint: address(0),
+            deadline: deadline,
+            signature: abi.encodePacked(r, s, v)
+        });
+    }
+
+    function _openAndPay(MezherPay.Order memory o, uint256 value, MezherPay.OpenSig memory open) internal {
+        mezherPay.openAndPay{value: value}(
+            o, _orderSig(payerPk, o), _permitSig(payerPk, o.payer, o.fromBalance, o.deadline), open
+        );
+    }
+
+    function test_openAndPay_paysMerchantAndKeepsRestWithPayer() public {
+        MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
+        uint256 fee = mezherPay.feeOf(12e18);
+
+        vm.expectEmit(true, false, false, true);
+        emit MezherPay.OpenedAtCheckout(payer, OPEN_COLL, OPEN_DEBT);
+        vm.expectEmit(true, true, true, true);
+        emit MezherPay.Paid(orderId, payer, merchant, 12e18, 12e18, 0, fee);
+        _openAndPay(o, OPEN_COLL, _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, o.deadline));
+
+        assertEq(musd.balanceOf(merchant), 12e18 - fee, "merchant net of fee");
+        assertEq(musd.balanceOf(treasury), fee, "treasury got the fee");
+        assertEq(musd.balanceOf(payer), 100e18 + OPEN_DEBT - 12e18, "rest of the Trove MUSD stays with payer");
+        assertEq(musd.balanceOf(address(mezherPay)), 0, "contract holds no MUSD");
+        assertEq(address(mezherPay).balance, 0, "contract holds no BTC");
+        assertEq(bos.collateral(payer), OPEN_COLL, "Trove holds the sent BTC");
+        assertTrue(mezherPay.settled(keccak256(abi.encode(payer, merchant, orderId))), "settled");
+    }
+
+    function test_openAndPay_revertsBelowMinIcr() public {
+        troveManager.setIcr(1.4e18);
+        MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
+        MezherPay.OpenSig memory open = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, o.deadline);
+        bytes memory sig = _orderSig(payerPk, o);
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, o.deadline);
+
+        vm.expectRevert(abi.encodeWithSelector(MezherPay.IcrBelowFloor.selector, 1.4e18));
+        mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
+    }
+
+    function test_openAndPay_revertsWhenValueDiffersFromSigned() public {
+        MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
+        MezherPay.OpenSig memory open = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, o.deadline);
+        bytes memory sig = _orderSig(payerPk, o);
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 12e18, o.deadline);
+
+        vm.expectRevert("BorrowerOperationsSignatures: Invalid signature");
+        mezherPay.openAndPay{value: OPEN_COLL * 2}(o, sig, permit, open);
+
+        assertEq(bos.collateral(payer), 0, "no Trove opened");
+        assertEq(musd.balanceOf(merchant), 0, "merchant unpaid");
+    }
+
+    function test_openAndPay_rejectsPartialFromBalance() public {
+        MezherPay.Order memory o = _order(payer, merchant, 12e18, 5e18);
+        MezherPay.OpenSig memory open = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, o.deadline);
+        bytes memory sig = _orderSig(payerPk, o);
+        MezherPay.PermitSig memory permit = _permitSig(payerPk, payer, 5e18, o.deadline);
+
+        vm.expectRevert(MezherPay.OpenMustPayFromBalance.selector);
+        mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
+    }
 }

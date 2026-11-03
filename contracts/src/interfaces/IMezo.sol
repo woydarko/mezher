@@ -15,6 +15,20 @@ interface IBorrowerOperationsSignatures {
         uint256 _deadline
     ) external;
 
+    /// @notice Opens a Trove for `_borrower` with `msg.value` BTC as collateral and mints `_debtAmount` MUSD
+    ///         to `_recipient`.
+    /// @param _signature EIP-712 `OpenTrove` signature by `_borrower` (ECDSA only); it binds `msg.value`
+    ///        as `assetAmount`.
+    function openTroveWithSignature(
+        uint256 _debtAmount,
+        address _upperHint,
+        address _lowerHint,
+        address _borrower,
+        address _recipient,
+        bytes memory _signature,
+        uint256 _deadline
+    ) external payable;
+
     /// @notice Current signature nonce of `_borrower`.
     function getNonce(address _borrower) external view returns (uint256);
 }

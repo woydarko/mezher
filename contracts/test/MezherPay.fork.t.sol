@@ -54,6 +54,9 @@ contract MezherPayForkTest is Test {
         keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
     bytes32 private constant WITHDRAW_MUSD_TYPEHASH =
         keccak256("WithdrawMUSD(uint256 amount,address borrower,address recipient,uint256 nonce,uint256 deadline)");
+    bytes32 private constant OPEN_TROVE_TYPEHASH = keccak256(
+        "OpenTrove(uint256 assetAmount,uint256 debtAmount,address borrower,address recipient,uint256 nonce,uint256 deadline)"
+    );
     bytes32 private constant EIP712_DOMAIN_TYPEHASH =
         keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
@@ -257,5 +260,60 @@ contract MezherPayForkTest is Test {
 
         assertEq(MUSD.balanceOf(attacker), 0, "attacker unchanged");
         assertEq(MUSD.balanceOf(merchant), 0, "merchant unchanged");
+    }
+
+    function test_fork_borrowSigForOtherRecipient_reverts() public {
+        address attacker = makeAddr("attacker");
+        uint256 deadline = block.timestamp + 15 minutes;
+        MezherPay.Order memory o = _order(merchant, 7e18, 0, orderId);
+        bytes memory sig = _orderSig(o);
+        MezherPay.PermitSig memory permit = _permitSig(0, deadline);
+        // The order is for the merchant, but the payer's Mezo signature names another recipient.
+        MezherPay.BorrowSig memory borrow = _borrowSig(7e18, attacker, deadline);
+
+        vm.expectRevert("BorrowerOperationsSignatures: Invalid signature");
+        mezherPay.pay(o, sig, permit, borrow);
+
+        assertEq(MUSD.balanceOf(attacker), 0, "attacker unchanged");
+        assertEq(MUSD.balanceOf(merchant), 0, "merchant unchanged");
+    }
+
+    function testFork_openAndPay_liveTestnet() public {
+        // A payer with no Trove: BTC in, Trove opened, merchant paid, in one transaction.
+        (payer, payerPk) = makeAddrAndKey("forkOpener");
+        uint256 collateral = 0.1 ether;
+        uint256 debtAmount = 2_000e18;
+        MezherPay.Order memory o = _order(merchant, 12e18, 12e18, orderId);
+        uint256 fee = mezherPay.feeOf(12e18);
+
+        bytes32 openHash = keccak256(
+            abi.encodePacked(
+                OPEN_TROVE_TYPEHASH, abi.encode(collateral, debtAmount, payer, payer), BOS.getNonce(payer), o.deadline
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(payerPk, keccak256(abi.encodePacked(hex"1901", bosDomainSeparator, openHash)));
+        MezherPay.OpenSig memory open = MezherPay.OpenSig({
+            debtAmount: debtAmount,
+            upperHint: address(0),
+            lowerHint: address(0),
+            deadline: o.deadline,
+            signature: abi.encodePacked(r, s, v)
+        });
+        bytes memory orderSig = _orderSig(o);
+        MezherPay.PermitSig memory permit = _permitSig(12e18, o.deadline);
+
+        vm.expectEmit(true, false, false, true);
+        emit MezherPay.OpenedAtCheckout(payer, collateral, debtAmount);
+        vm.expectEmit(true, true, true, true);
+        emit MezherPay.Paid(orderId, payer, merchant, 12e18, 12e18, 0, fee);
+        mezherPay.openAndPay{value: collateral}(o, orderSig, permit, open);
+
+        assertEq(TROVE_MANAGER.getTroveStatus(payer), 1, "trove active");
+        assertEq(MUSD.balanceOf(merchant), 12e18 - fee, "merchant received the amount net of fee");
+        assertEq(MUSD.balanceOf(treasury), fee, "treasury received the fee");
+        assertEq(MUSD.balanceOf(payer), debtAmount - 12e18, "rest of the Trove MUSD stays with payer");
+        assertEq(MUSD.balanceOf(address(mezherPay)), 0, "contract holds no MUSD");
+        assertEq(address(mezherPay).balance, 0, "contract holds no BTC");
     }
 }
