@@ -63,3 +63,35 @@ console.log(`System collateral ratio (TCR):     ${(Number(formatUnits(tcr, 16)))
 console.log(`MUSD total supply:                 ${usd(supply)}`);
 console.log(`MUSD in Stability Pool:            ${usd(spDeposits)}`);
 console.log(`Unused credit above 150%:          ${usd(headroom)} MUSD across ${withHeadroom} Troves`);
+
+// Open Troves at earlier blocks (needs an archive RPC; the default one is). Shows how many were closed or redeemed away.
+for (const b of [5_000_000n, 10_400_000n, 12_400_000n, 12_749_209n]) {
+  try {
+    const blk = await client.getBlock({ blockNumber: b });
+    const k = await client.readContract({ address: TROVE_MANAGER, abi: tm, functionName: "getTroveOwnersCount", blockNumber: b });
+    console.log(`Open Troves at block ${b} (${new Date(Number(blk.timestamp) * 1000).toISOString().slice(0, 10)}): ${k}`);
+  } catch {
+    console.log(`Open Troves at block ${b}: RPC has no state for it`);
+  }
+}
+
+// redeemCollateral calls to the TroveManager, from the Mezo explorer API (the newest 1,000 transactions at most).
+// The indexer marks many as "error: awaiting_internal_transactions", which is not a revert, so only "success" is counted as sure.
+try {
+  const base = `https://api.explorer.mezo.org/api/v2/addresses/${TROVE_MANAGER}/transactions?filter=to`;
+  const txs = [];
+  let q = "";
+  for (let i = 0; i < 20; i++) {
+    const j = await (await fetch(base + q)).json();
+    txs.push(...j.items);
+    if (!j.next_page_params) break;
+    q = "&" + new URLSearchParams(Object.entries(j.next_page_params).map(([k, v]) => [k, String(v)]));
+  }
+  const red = txs.filter((t) => t.method === "redeemCollateral");
+  const dates = txs.map((t) => t.timestamp).sort();
+  console.log(
+    `redeemCollateral in the newest ${txs.length} TroveManager txs (${dates[0]?.slice(0, 10)} to ${dates.at(-1)?.slice(0, 10)}): ${red.length}, of which ${red.filter((t) => t.status === "ok").length} marked success`,
+  );
+} catch (e) {
+  console.log(`redeemCollateral count unavailable: ${e.message}`);
+}

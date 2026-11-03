@@ -29,6 +29,17 @@ Read the `pay` row. Without `--match-test` the `pay` row also counts reverting t
 | `pay`, borrow only | 657,095 | Whole amount borrowed. |
 | `pay`, live v1 with real hints | 430,852 | Live testnet tx [`0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0`](https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0) (v1 contract). |
 
+Measured on the live v2 contract (testnet, real hints, team wallets, gas from the receipts via `eth_getTransactionReceipt`):
+
+| Call | Gas | Case |
+|---|---|---|
+| `openAndPay` | 770,738 | [`0xbd5855f0…`](https://explorer.test.mezo.org/tx/0xbd5855f0d7c0a322c584597f81296e0be3a56c434c50c378879ef6b17336dfd0): 1,800 MUSD Trove, 20 MUSD paid. Payer paid the gas. |
+| `pay`, split, relayer | 501,364 | [`0x82dc5bd3…`](https://explorer.test.mezo.org/tx/0x82dc5bd34e8a0b0a28aef153dc254d734293ede829c061ced1310904847c831d): 1,785 MUSD, 1,780 from balance and 5 borrowed, fee 8.925. |
+| `pay`, borrow only, relayer | 462,947 | [`0xbb14adf9…`](https://explorer.test.mezo.org/tx/0xbb14adf9d23f25d1bf5b1b9d9d1fb816c1d1a42bd2ae51b96efd090a6a77518c): 20 MUSD borrowed, fee 0.1. |
+| `pay`, balance only, relayer | 104,605 | [`0x0b1cbd3b…`](https://explorer.test.mezo.org/tx/0x0b1cbd3b070911af42a36f4a45a9336cb11d3163186f134239ef769045fb9948): 20 MUSD, fee 0.1. A self-payment by the demo merchant wallet. |
+
+Each live figure rests on one transaction. The real-hints split costs 26% less gas than the fork run (501,364 against 679,312), so the fork figures above are conservative.
+
 Price inputs come from Mezo mainnet and move all the time. Rerun them:
 
 ```
@@ -44,9 +55,21 @@ The script reads the mainnet gas price (`eth_gasPrice`) and the BTC price from t
 - `pay` at 430,852 gas (real hints): about $0.0482.
 - `openAndPay` at 986,926 gas: about $0.1104, paid by the payer.
 
+At the same gas price and BTC price ($76,507), the live v2 figures cost: split `pay` 501,364 gas about $0.0561; borrow-only `pay` 462,947 gas about $0.0518; balance-only `pay` 104,605 gas about $0.0117; `openAndPay` 770,738 gas about $0.0862, paid by the payer. These are computed from the numbers above, not re-read; `node scripts/pay-cost.mjs 501364` on 2026-11-03 later gave $0.0567 at BTC $77,270.
+
 ## Break-even size
 
-A payment covers its own gas when 0.5% of it is at least the gas cost: $0.0760 / 0.005 = $15.20. Rounded up to a whole MUSD, that is 16 MUSD, which is `MIN_SPONSORED_WEI` in `web/lib/mezo.ts`. With real hints (430,852 gas) the break-even is about 10 MUSD; we use the conservative figure. The mainnet gas price is the input most likely to move, so rerun the script before changing the constant.
+A payment covers its own gas when 0.5% of it is at least the gas cost. With the conservative fork figure: $0.0760 / 0.005 = $15.20, which rounds up to 16 MUSD, the value of `MIN_SPONSORED_WEI` in `web/lib/mezo.ts`.
+
+With the real-hints measurements on live v2:
+
+| `pay` case | Gas | Cost at the prices above | Break-even | Rounded up |
+|---|---|---|---|---|
+| Split (501,364) | 501,364 | about $0.0561 | about $11.2 | 12 MUSD |
+| Borrow only (462,947) | 462,947 | about $0.0518 | about $10.4 | 11 MUSD |
+| Balance only (104,605) | 104,605 | about $0.0117 | about $2.3 | 3 MUSD |
+
+So the 16 MUSD floor is conservative: real hints would cover the gas of a split payment from about 12 MUSD. **`MIN_SPONSORED_WEI` stays 16 MUSD.** Reasons: each live figure is one transaction, the mainnet gas price and BTC price move, and gas also depends on the hints and the Trove list, which the relay chooses at send time. The mainnet gas price is the input most likely to move, so rerun `pay-cost.mjs` before changing the constant.
 
 ## Scenarios (all estimates)
 
