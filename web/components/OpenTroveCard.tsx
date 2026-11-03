@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { parseUnits, type Address } from "viem";
 import { useBalance, useReadContract } from "wagmi";
@@ -123,6 +124,11 @@ export function OpenTroveCard({
         Lock {coll || "0"} BTC, borrow {debt || "0"} MUSD, pay
       </PrimaryButton>
       {error && <StatusLine tone="error">{error}</StatusLine>}
+      {q?.state === "not_enough_btc" && (
+        <p>
+          Not enough test BTC? <Link href="/try">Get test BTC on the try page</Link>, then come back.
+        </p>
+      )}
       <SecondaryButton href={OPEN_ON_MEZO}>Or open it on Mezo</SecondaryButton>
     </Card>
   );

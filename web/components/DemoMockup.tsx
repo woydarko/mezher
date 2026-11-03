@@ -10,22 +10,22 @@ const STEPS = [
   {
     art: "link",
     title: "Shop sends a link",
-    body: "The merchant types an amount on Mezher and shares the link. No account, no setup.",
+    body: "The merchant types an amount on Mezher and shares the link. The shop turns payments on once; after that each link is just an amount.",
   },
   {
     art: "sign",
     title: "You sign, that's it",
-    body: "You see what comes from your balance and what gets borrowed, then sign once or twice.",
+    body: "You see what comes from your balance and what gets borrowed, then sign: once or twice, up to three if checkout opens your Trove.",
   },
   {
     art: "paid",
     title: "Shop is paid, your BTC stays",
-    body: "The merchant gets the full amount in MUSD in one transaction. Your Bitcoin stays in your Trove.",
+    body: "The merchant gets the amount in MUSD, minus a 0.5% fee, in one transaction. Your Bitcoin stays in your Trove.",
   },
 ] as const;
 
 /**
- * The golden path as a crayon mockup: the payer's phone pays 12 MUSD (5 balance + 7 borrowed) and the row
+ * The golden path as a crayon mockup: the payer's phone pays 20 MUSD (8 balance + 12 borrowed) and the row
  * lands on the merchant's laptop, with the three steps lighting up in sync. It plays once when it scrolls
  * into view and rests on the paid frame; "Replay" runs it again (no endless loop, WCAG 2.2.2).
  * Under reduced motion every piece shows its final state.
@@ -62,26 +62,26 @@ export function DemoMockup() {
             <div className={d.screen}>
               <p className={d.title}>Coffee</p>
               <p className={d.small}>to 0x0491…11AA</p>
-              <p className={d.total + " mono"}>12.00 MUSD</p>
+              <p className={d.total + " mono"}>20.00 MUSD</p>
               <div className={d.line + " " + d.lineA}>
                 <span>From your balance</span>
-                <span className="mono">5.00</span>
+                <span className="mono">8.00</span>
               </div>
               <div className={d.line + " " + d.lineB}>
                 <span>Borrowed vs BTC</span>
-                <span className="mono">7.00</span>
+                <span className="mono">12.00</span>
               </div>
               <div className={d.line + " " + d.lineC}>
                 <span>Gas you pay</span>
                 <span className="mono">0</span>
               </div>
-              <div className={d.button}>Pay 12.00 MUSD</div>
+              <div className={d.button}>Pay 20.00 MUSD</div>
               <span className={d.tap} />
               <div className={d.receipt}>
                 <svg viewBox="0 0 64 64" className={d.check}>
                   <path d="M9 35c4 4 9 9 13 14C30 35 41 22 56 11" pathLength={1} />
                 </svg>
-                <p className={d.paid + " mono"}>Paid 12.00</p>
+                <p className={d.paid + " mono"}>Paid 20.00</p>
                 <p className={d.small}>Your BTC stayed put.</p>
               </div>
             </div>
@@ -93,9 +93,9 @@ export function DemoMockup() {
             <div className={d.lid}>
               <p className={d.title}>Payments</p>
               <div className={d.row + " " + d.rowNew}>
-                <span className="mono">12.00 MUSD</span>
+                <span className="mono">20.00 MUSD</span>
                 <span>0xe816…786e</span>
-                <span className="mono">5 / 7</span>
+                <span className="mono">8 / 12</span>
               </div>
               <div className={d.row}>
                 <span className="mono">4.00 MUSD</span>
@@ -129,7 +129,7 @@ export function DemoMockup() {
       </div>
 
       <figcaption className={d.caption}>
-        <span>The payer taps once; the merchant&apos;s list shows the full 12 MUSD a moment later.</span>
+        <span>The payer taps once; the merchant&apos;s list shows the 20 MUSD a moment later.</span>
         <button
           type="button"
           className={styles.secondary + " " + d.replay}

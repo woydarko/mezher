@@ -1,17 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { DemoMockup } from "@/components/DemoMockup";
 import { Doodle } from "@/components/Doodle";
 import { FaqItem } from "@/components/FaqItem";
 import { HeroScenery } from "@/components/HeroScenery";
 import { Reveal } from "@/components/Reveal";
 import styles from "@/components/ui.module.css";
-import { buildLink, randomOrder } from "@/lib/link";
 import l from "./landing.module.css";
-
-const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
 
 const SAFETY = [
   {
@@ -23,8 +19,8 @@ const SAFETY = [
     body: "Your borrow signature names the merchant. Nobody can send it anywhere else, not even our relayer.",
   },
   {
-    title: "No gas when you borrow",
-    body: "When part of the payment is borrowed, our relayer sends it and pays the network fee. You just sign.",
+    title: "Gas covered from 16 MUSD",
+    body: "On payments of 16 MUSD and up, our relayer sends the payment and pays the network fee. You just sign. Smaller ones, and opening a Trove at checkout, use your own gas.",
   },
 ];
 
@@ -35,11 +31,11 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top. If your balance covers the whole payment, nothing is borrowed and you pay the small network fee yourself.",
+    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top. If your balance covers the whole payment, nothing is borrowed. Gas is covered from 16 MUSD up; below that you pay the small network fee yourself.",
   },
   {
     q: "Do I need MUSD in my wallet?",
-    a: "No, but you need a Trove on Mezo. Whatever your balance covers is used first; the rest is borrowed. With 0 MUSD the whole payment is borrowed.",
+    a: "No. Whatever your balance covers is used first; the rest is borrowed from your Trove. With 0 MUSD the whole payment is borrowed. No Trove yet? Checkout can open one from your BTC in the same payment.",
   },
   {
     q: "Is this on mainnet?",
@@ -48,12 +44,8 @@ const FAQ = [
 ];
 
 export default function Home() {
-  // Fresh order id per visit so the demo never lands on "Already paid".
-  const [demoHref] = useState(() => {
-    if (!DEMO_MERCHANT) return "/merchant";
-    const built = buildLink("", { to: DEMO_MERCHANT, amount: "12", order: randomOrder(), label: "Coffee" });
-    return built.ok ? built.url : "/merchant";
-  });
+  // /try reads the wallet and builds a fresh order for it.
+  const demoHref = "/try";
 
   return (
     <main className="page page-landing">
@@ -69,7 +61,7 @@ export default function Home() {
           </h1>
           <p className={l.lead}>
             Short on MUSD? Mezher borrows only the missing part against your BTC, straight to the merchant, in one
-            transaction. No selling, and no gas for the part you borrow.
+            transaction. No selling. We cover the gas on payments of 16 MUSD and up.
           </p>
           <div className={l.ctas}>
             <Link href={demoHref} className={styles.primary}>
@@ -125,8 +117,8 @@ export default function Home() {
       </section>
 
       <Reveal as="section" className={styles.card + " " + l.final}>
-        <h2>Got a Trove? Pay for a test coffee.</h2>
-        <p>Connect a wallet on Mezo testnet and run the 12 MUSD coffee checkout.</p>
+        <h2>Got test BTC? Pay for a test coffee.</h2>
+        <p>Connect a wallet on Mezo testnet and run the 20 MUSD coffee checkout.</p>
         <Link href={demoHref} className={styles.primary + " " + l.finalCta}>
           Try the Demo
         </Link>

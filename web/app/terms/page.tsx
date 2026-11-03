@@ -23,6 +23,16 @@ export default function TermsPage() {
             When you sign a borrow, you allow that exact amount to be borrowed from your Trove and paid to the merchant
             named in the link. Watch your Trove ratio: Mezo can liquidate a Trove that drops too low.
           </li>
+          <li>
+            A merchant pays Mezher a 0.5% fee on each payment received, out of the payment. To allow it, the merchant signs
+            a permit for up to 10,000 MUSD in fees. It can only be used for that fee on payments actually received, and
+            the merchant can revoke it any time by setting the MUSD allowance for MezherPay to 0.
+          </li>
+          <li>
+            If you have no Trove, checkout can open one for you from your BTC as part of the payment. It takes up to
+            three signatures and you send the transaction and pay its gas. The Trove is yours, with Mezo&apos;s rules,
+            interest and liquidation risk.
+          </li>
           <li>MUSD, Troves and the borrow itself are Mezo&apos;s contracts. Mezo can upgrade them, and their rules apply.</li>
           <li>
             MezherPay has no owner and holds no funds between payments
@@ -55,7 +65,7 @@ export default function TermsPage() {
           <li>
             Our gas relay logs only the route, the response status, the first 6 characters of your address and the
             transaction hash. To limit abuse it keeps your address and IP in server memory (never on disk) while that
-            server instance runs.
+            server instance runs. The test BTC faucet does the same with the address and IP of each claim.
           </li>
           <li>Your browser talks to the Mezo testnet RPC directly to read balances and Troves.</li>
         </ul>
