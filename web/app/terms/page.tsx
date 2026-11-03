@@ -64,7 +64,7 @@ export default function TermsPage() {
           <li>
             Our gas relay logs only the route, the response status, the first 6 characters of your address and the
             transaction hash. To limit abuse it keeps your address and IP in server memory (never on disk) while that
-            server instance runs. The test BTC faucet does the same with the address and IP of each claim.
+            server instance runs.
           </li>
           <li>Your browser talks to the Mezo testnet RPC directly to read balances and Troves.</li>
         </ul>

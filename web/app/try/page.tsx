@@ -12,63 +12,20 @@ import { WalletButton } from "@/components/WalletButton";
 import { BITCOIN_WALLET_MESSAGE, isBitcoinConnector, isSmartAccount } from "@/lib/checkout";
 import { buildLink, randomOrder } from "@/lib/link";
 import { formatMusd } from "@/lib/format";
-import { ADDRESSES, explorerTx, MEZO_TESTNET, MIN_SPONSORED_WEI, musdAbi, troveManagerAbi } from "@/lib/mezo";
+import { ADDRESSES, MEZO_TESTNET, MIN_SPONSORED_WEI, musdAbi, troveManagerAbi } from "@/lib/mezo";
 import { isDemoMerchant, tryNote, tryScenarios } from "@/lib/try";
 
 const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
 const MEZO_FAUCET = "https://faucet.test.mezo.org/";
 
-const FAUCET_ERRORS: Record<string, string> = {
-  already_claimed: "This wallet already claimed from our faucet. If it has no test BTC, use the Mezo faucet below.",
-  already_funded: "This wallet already has enough test BTC, so you can skip this step.",
-  rate_limited: "Too many tries from your network. Wait a minute and try again.",
-  ip_claimed: "Someone on your network already used our faucet today, and it allows one claim per network per day. Use the Mezo faucet below.",
-  invalid_input: "That wallet address was not accepted.",
-};
-
-function Faucet({ address }: { address: string }) {
-  const [state, setState] = useState<{ busy: boolean; hash?: string; error?: string; fallback?: boolean }>({ busy: false });
-
-  async function claim() {
-    setState({ busy: true });
-    try {
-      const res = await fetch("/api/faucet", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ address }) });
-      const body = (await res.json()) as { hash?: string; error?: string };
-      if (res.ok && body.hash) setState({ busy: false, hash: body.hash });
-      else if (body.error === "faucet_empty") setState({ busy: false, error: "Our faucet is empty right now.", fallback: true });
-      else if (body.error === "faucet_unavailable")
-        setState({ busy: false, error: "The faucet could not send right now. Try again in a minute.", fallback: true });
-      else
-        setState({
-          busy: false,
-          error: FAUCET_ERRORS[body.error ?? ""] ?? "The faucet could not send right now.",
-          fallback: body.error === "already_claimed" || body.error === "ip_claimed",
-        });
-    } catch {
-      setState({ busy: false, error: "Can't reach the faucet. Try again." });
-    }
-  }
-
+function GetBtc() {
   return (
     <Card title="1. Get test BTC">
       <p>
-        Opening a Trove needs test BTC as collateral, plus a little for gas. Testnet only: it has no real value.
+        Opening a Trove needs test BTC as collateral, plus a little for gas. The smallest Trove carries about 2,000 MUSD
+        of debt and must stay above a 150% ratio, so request enough to cover that. Testnet only: it has no real value.
       </p>
-      <PrimaryButton onClick={claim} loading={state.busy} loadingLabel="Sending…">
-        Get test BTC
-      </PrimaryButton>
-      {state.hash && (
-        <StatusLine tone="success" href={explorerTx(state.hash as `0x${string}`)}>
-          Test BTC sent.
-        </StatusLine>
-      )}
-      {state.error && <StatusLine tone="error">{state.error}</StatusLine>}
-      {state.fallback && (
-        <>
-          <p>Request test BTC from the Mezo faucet instead, then come back.</p>
-          <SecondaryButton href={MEZO_FAUCET}>Open the Mezo faucet</SecondaryButton>
-        </>
-      )}
+      <SecondaryButton href={MEZO_FAUCET}>Open the Mezo faucet</SecondaryButton>
     </Card>
   );
 }
@@ -153,7 +110,7 @@ export default function TryPage() {
         </Card>
       ) : isConnected && address && smartAccount.data === false ? (
         <>
-          <Faucet address={address} />
+          <GetBtc />
           <Scenario address={address} />
         </>
       ) : isConnected ? (

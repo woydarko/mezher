@@ -117,7 +117,7 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 
 ## Try it and proof
 
-- **[`/try`](https://mezher.vercel.app/try)** takes a wallet with test BTC (our faucet or Mezo's) through a 20 MUSD payment to a demo merchant, and offers the path that fits the wallet: open a Trove and pay, pay from balance, part balance and part borrowed, or fully borrowed. It needs an EVM wallet, and it does not offer a payment from the demo merchant's own wallet.
+- **[`/try`](https://mezher.vercel.app/try)** takes a wallet with test BTC (from the [Mezo faucet](https://faucet.test.mezo.org)) through a 20 MUSD payment to a demo merchant, and offers the path that fits the wallet: open a Trove and pay, pay from balance, part balance and part borrowed, or fully borrowed. It needs an EVM wallet, and it does not offer a payment from the demo merchant's own wallet.
 - **[`/proof`](https://mezher.vercel.app/proof)** reads every `Paid` event from the chain and counts payers and merchants. "Team" is a wallet we control, "outside" is anyone else.
 
 **Team-wallet proofs on v2** (our own wallets, testnet, read from the chain; more in [docs/evidence.md](docs/evidence.md)):
@@ -179,7 +179,7 @@ Then open http://localhost:3000 (or use the live app at https://mezher.vercel.ap
 | `NEXT_PUBLIC_DEMO_MERCHANT` | the demo merchant address; `/try` needs it |
 | `RELAYER_PRIVATE_KEY` | a burner key with a little test BTC, **server only**, never committed |
 
-`.env.example` lists the optional ones (team wallets, faucet key). To pay, use an EVM wallet on Mezo testnet: get test BTC from our faucet on `/try` or the [Mezo faucet](https://faucet.test.mezo.org), then open a Trove in the checkout.
+`.env.example` lists the optional ones (team wallets). To pay, use an EVM wallet on Mezo testnet: get test BTC from the [Mezo faucet](https://faucet.test.mezo.org), then open a Trove in the checkout.
 
 ## Testing
 

@@ -2,7 +2,7 @@
 
 **Testnet only. One AI agent did a manual review, plus a Slither run; this is not a professional audit.** The multi-agent passes of the audit skill did not run. Do not use MezherPay with real funds.
 
-The review covers `MezherPay` v2 and the relay, activation and faucet routes. It read Mezo's `MUSD`, `BorrowerOperations` and `BorrowerOperationsSignatures` from the [`mezo-org/musd`](https://github.com/mezo-org/musd/tree/main/solidity/contracts) `main` branch, which was not compared to the deployed bytecode. The fork tests cover the paths they exercise on the deployed contracts. A borrow signature used alone, a permit used alone, an expired signature, a tampered debt, an active Trove and a value mismatch run only against the mock.
+The review covers `MezherPay` v2 and the relay and activation routes, plus a faucet route that has since been removed: `/try` now uses the official Mezo faucet. It read Mezo's `MUSD`, `BorrowerOperations` and `BorrowerOperationsSignatures` from the [`mezo-org/musd`](https://github.com/mezo-org/musd/tree/main/solidity/contracts) `main` branch, which was not compared to the deployed bytecode. The fork tests cover the paths they exercise on the deployed contracts. A borrow signature used alone, a permit used alone, an expired signature, a tampered debt, an active Trove and a value mismatch run only against the mock.
 
 ## Properties
 
