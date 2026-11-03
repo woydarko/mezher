@@ -11,14 +11,23 @@ Mezher charges the merchant 50 basis points (0.5%) per payment. This page prices
 
 ## Cost per payment
 
-Gas measured on a Mezo testnet fork. These runs used `address(0)` for the sorted-list hints, which makes gas higher than a real hinted call, so the `pay` numbers are an upper bound.
+Gas measured on a Mezo testnet fork. These runs used `address(0)` for the sorted-list hints, which makes gas higher than a real hinted call, so the `pay` numbers are a conservative estimate. Each rests on one fork run.
+
+Reproduce the fork figures (needs Foundry; the run forks testnet and takes about a minute):
+
+```
+cd contracts
+MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol --match-test test_fork_split_5plus7 --gas-report
+```
+
+Read the `pay` row. Without `--match-test` the `pay` row also counts reverting tests and is not usable. A rerun on 2026-11-03 gave 719,712 for the split case, against the 679,312 used below: fork gas moves with chain state. At 719,712 gas the break-even is about $16.10, which would round up to 17 MUSD.
 
 | Call | Gas | Case |
 |---|---|---|
 | `openAndPay` | 986,926 | 0.1 BTC, 2,000 MUSD Trove, 12 MUSD paid. Payer pays the gas. |
 | `pay`, split | 679,312 | 5 MUSD from balance and 7 MUSD borrowed. Used for the fee model. |
 | `pay`, borrow only | 657,095 | Whole amount borrowed. |
-| `pay`, live v1 with real hints | 430,852 | Testnet tx `0x51e6aaf5…` (v1 contract). |
+| `pay`, live v1 with real hints | 430,852 | Live testnet tx [`0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0`](https://explorer.test.mezo.org/tx/0x51e6aaf5e6795cb9804735c9bfbfa44567aa93566e48a8847f29594bb9527dd0) (v1 contract). |
 
 Price inputs come from Mezo mainnet and move all the time. Rerun them:
 
@@ -43,13 +52,13 @@ A payment covers its own gas when 0.5% of it is at least the gas cost: $0.0760 /
 
 Assumptions, not measurements: every payment is sponsored `pay` at 679,312 gas and $0.0760; the average payment and monthly volume are guesses; hosting is a flat assumed cost per month. No merchant has agreed to any of this.
 
-| Scenario (estimate) | Payments / month | Avg payment | Volume | Fee revenue | Relayer gas | Hosting (assumed) | Net |
-|---|---|---|---|---|---|---|---|
-| Pilot | 200 | 20 MUSD | 4,000 MUSD | 20.00 | 15.20 | 20 | -15.20 |
-| Early mainnet | 2,000 | 50 MUSD | 100,000 MUSD | 500.00 | 152.00 | 20 | 328.00 |
-| Growth | 20,000 | 50 MUSD | 1,000,000 MUSD | 5,000.00 | 1,520.00 | 100 | 3,380.00 |
+| Scenario (estimate) | Payments / month | Avg payment (MUSD) | Volume (MUSD) | Fee revenue (USD) | Relayer gas (USD) | Hosting (USD, assumed) | Net (USD) | Break-even size (MUSD) |
+|---|---|---|---|---|---|---|---|---|
+| Pilot | 200 | 20 MUSD | 4,000 MUSD | 20.00 | 15.20 | 20 | -15.20 | 16 |
+| Early mainnet | 2,000 | 50 MUSD | 100,000 MUSD | 500.00 | 152.00 | 20 | 328.00 | 16 |
+| Growth | 20,000 | 50 MUSD | 1,000,000 MUSD | 5,000.00 | 1,520.00 | 100 | 3,380.00 | 16 |
 
-Amounts in USD, MUSD treated as $1. Each payment nets fee minus gas: 0.024 at 20 MUSD, 0.174 at 50 MUSD. To cover a 20 per month host, that takes roughly 830 payments a month at 20 MUSD, or 115 at 50 MUSD. The pilot row loses money.
+MUSD treated as $1. Break-even size is per payment (gas only, see above). Each payment nets fee minus gas: 0.024 at 20 MUSD, 0.174 at 50 MUSD. To cover a 20 per month host, that takes roughly 830 payments a month at 20 MUSD, or 115 at 50 MUSD. The pilot row loses money.
 
 ## Limits
 

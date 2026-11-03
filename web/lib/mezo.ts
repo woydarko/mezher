@@ -35,7 +35,7 @@ export const ACTIVATION_BUDGET_WEI = 10_000n * 10n ** 18n;
 
 /**
  * 16 MUSD: smallest whole amount whose 0.5% fee covers the relayer's gas for `pay`. Inputs: 679,312 gas
- * (fork, address(0) hints, conservative), 1,462,500 wei gas price and $76,508 BTC (Mezo mainnet, 2026-11-03)
+ * (fork, address(0) hints, conservative), 1,462,500 wei gas price and $76,507 BTC (Mezo mainnet, 2026-11-03)
  * = $0.0760 per pay, so $15.20 at 50 bps, rounded up. Below it the payer uses their own gas. See docs/BUSINESS.md.
  */
 export const MIN_SPONSORED_WEI = 16n * 10n ** 18n;
