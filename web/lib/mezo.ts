@@ -179,6 +179,20 @@ export const troveManagerAbi = [
     ],
     outputs: [{ type: "uint256" }],
   },
+  {
+    type: "function",
+    name: "checkRecoveryMode",
+    stateMutability: "view",
+    inputs: [{ name: "_price", type: "uint256" }],
+    outputs: [{ type: "bool" }],
+  },
+  {
+    type: "function",
+    name: "getTroveMaxBorrowingCapacity",
+    stateMutability: "view",
+    inputs: [{ name: "_borrower", type: "address" }],
+    outputs: [{ type: "uint256" }],
+  },
 ] as const;
 
 export const priceFeedAbi = [

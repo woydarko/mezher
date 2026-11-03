@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
-import { BaseError, ContractFunctionRevertedError, zeroAddress, type Address, type Hex } from "viem";
+import { zeroAddress, type Address, type Hex } from "viem";
 import {
   useAccount,
   usePublicClient,
@@ -44,6 +44,7 @@ import {
   priceFeedAbi,
   troveManagerAbi,
 } from "@/lib/mezo";
+import { errorCode } from "@/lib/errors";
 import { fetchPaidLogs, settledKey } from "@/lib/paid-logs";
 import { UI_ICR_FLOOR_E18, icrE18, quote, type TroveState } from "@/lib/quote";
 import { openTroveTypedData, orderTypedData, permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
@@ -59,19 +60,18 @@ const MIN_ICR_CHOICES: { value: bigint; label: string }[] = [
 const ZERO_32 = ("0x" + "0".repeat(64)) as Hex;
 const NO_PERMIT: PermitSig = { deadline: 0n, v: 27, r: ZERO_32, s: ZERO_32 };
 const NO_BORROW: BorrowSig = { upperHint: zeroAddress, lowerHint: zeroAddress, deadline: 0n, signature: "0x" };
+// Error codes (see lib/errors.ts) for a quote that stopped being payable between render and signing.
+const STALE_CODE = {
+  needs_trove: "quote_changed",
+  blocked_ratio: "ICR < MCR",
+  blocked_recovery: "Recovery Mode",
+  blocked_capacity: "exceeds maxBorrowingCapacity",
+} as const;
 const OPEN_TROVE_URL = "https://testnet.mezo.org";
 
 type Signed = { order: Order; orderSig: Hex; permit: PermitSig; borrow: BorrowSig };
 
 const short = (a: string) => a.slice(0, 6) + "…" + a.slice(-4);
-
-/** Custom error name or revert string when the wallet surfaces one, else viem's short message. */
-function errorCode(err: unknown): string {
-  if (!(err instanceof BaseError)) return err instanceof Error ? err.message : "unknown";
-  const revert = err.walk((e) => e instanceof ContractFunctionRevertedError);
-  if (revert instanceof ContractFunctionRevertedError) return revert.data?.errorName ?? revert.reason ?? err.shortMessage;
-  return err.shortMessage;
-}
 
 export default function PayPage() {
   return (
@@ -189,6 +189,13 @@ function CheckoutFor({ link }: { link: PayLink }) {
         args: [payer],
       },
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" },
+      {
+        chainId: MEZO_TESTNET.id,
+        address: ADDRESSES.troveManager,
+        abi: troveManagerAbi,
+        functionName: "getTroveMaxBorrowingCapacity",
+        args: [payer],
+      },
     ],
   });
 
@@ -214,10 +221,26 @@ function CheckoutFor({ link }: { link: PayLink }) {
     };
   }
   const priceE18 = reads.data?.[3];
+  const capacityWei = reads.data?.[4];
+  // Needs the price, so it can't ride in the multicall above.
+  const recovery = useReadContract({
+    chainId: MEZO_TESTNET.id,
+    address: ADDRESSES.troveManager,
+    abi: troveManagerAbi,
+    functionName: "checkRecoveryMode",
+    args: [priceE18 ?? 0n],
+    query: { enabled: priceE18 !== undefined, refetchInterval: 15_000 },
+  });
+  const recoveryMode = recovery.data;
   const feeWei = borrowWei > 0n ? fee.data : 0n;
   const q =
-    balanceWei !== undefined && trove && priceE18 !== undefined && feeWei !== undefined
-      ? quote({ amountWei: link.amountWei, balanceWei, trove, priceE18, feeWei })
+    balanceWei !== undefined &&
+    trove &&
+    priceE18 !== undefined &&
+    feeWei !== undefined &&
+    capacityWei !== undefined &&
+    recoveryMode !== undefined
+      ? quote({ amountWei: link.amountWei, balanceWei, trove, priceE18, feeWei, recoveryMode, capacityWei, minIcrE18: minIcr })
       : undefined;
   // Snapshot of the split shown on the receipt; the live quote moves once the balance updates.
   const [paidSplit, setPaidSplit] = useState<{ fromBalanceWei: bigint; borrowWei: bigint } | null>(null);
@@ -308,12 +331,47 @@ function CheckoutFor({ link }: { link: PayLink }) {
     deadline,
   });
 
+  /** Re-reads everything the quote depends on, so a stale screen can't ask for signatures that will revert. */
+  async function freshQuote(owner: Address) {
+    const read = publicClient!.readContract;
+    const priceE18 = await read({ address: ADDRESSES.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" });
+    const tm = { address: ADDRESSES.troveManager, abi: troveManagerAbi } as const;
+    const [balanceWei, status, debtAndColl, capacityWei, recoveryMode] = await Promise.all([
+      read({ address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [owner] }),
+      read({ ...tm, functionName: "getTroveStatus", args: [owner] }),
+      read({ ...tm, functionName: "getEntireDebtAndColl", args: [owner] }),
+      read({ ...tm, functionName: "getTroveMaxBorrowingCapacity", args: [owner] }),
+      read({ ...tm, functionName: "checkRecoveryMode", args: [priceE18] }),
+    ]);
+    const [coll, principal, interest, , pendingPrincipal, pendingInterest] = debtAndColl;
+    const freshTrove: TroveState = {
+      status: Number(status),
+      collWei: coll,
+      debtWei: principal + interest + pendingPrincipal + pendingInterest,
+    };
+    const borrow = link.amountWei - (balanceWei < link.amountWei ? balanceWei : link.amountWei);
+    const feeWei =
+      borrow > 0n
+        ? await read({ address: ADDRESSES.borrowerOperations, abi: borrowerOperationsAbi, functionName: "getBorrowingFee", args: [borrow] })
+        : 0n;
+    const fresh = quote({ amountWei: link.amountWei, balanceWei, trove: freshTrove, priceE18, feeWei, recoveryMode, capacityWei, minIcrE18: minIcr });
+    return { fresh, freshTrove };
+  }
+
   async function pay() {
-    if (!address || !publicClient || !mezherPay || !trove || q?.state !== "ok") return;
+    if (!address || !publicClient || !mezherPay || q?.state !== "ok") return;
     setFallback(null);
-    setPaidSplit({ fromBalanceWei: q.fromBalanceWei, borrowWei: q.borrowWei });
     dispatch({ type: "START" });
     try {
+      const { fresh: q, freshTrove: trove } = await freshQuote(address);
+      if (q.state !== "ok") {
+        // The screen was stale: show the new state instead of asking for signatures.
+        dispatch({ type: "FAILED", code: STALE_CODE[q.state] });
+        refetch();
+        recovery.refetch();
+        return;
+      }
+      setPaidSplit({ fromBalanceWei: q.fromBalanceWei, borrowWei: q.borrowWei });
       const withPermit = await permitNeeded(address, q.fromBalanceWei);
       setPlan({ permit: withPermit, third: q.borrowWei > 0n });
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
@@ -523,6 +581,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
   else if (activation.activated === undefined || smartAccount.data === undefined)
     gate = <StatusLine tone="info">Checking the shop and your wallet…</StatusLine>;
 
+  const staleLine = state.step === "failed" && state.error ? <StatusLine tone="error">{state.error}</StatusLine> : null;
   const onMezo = isConnected && chainId === MEZO_TESTNET.id;
 
   return (
@@ -549,18 +608,19 @@ function CheckoutFor({ link }: { link: PayLink }) {
 
       {onMezo && mezherPay && !gate && (
         <>
-          {(reads.isLoading || (borrowWei > 0n && fee.isLoading)) && (
+          {(reads.isLoading || recovery.isLoading || (borrowWei > 0n && fee.isLoading)) && (
             <Card>
               <StatusLine tone="info">Reading your balance and Trove…</StatusLine>
             </Card>
           )}
 
-          {(reads.isError || fee.isError) && (
+          {(reads.isError || recovery.isError || fee.isError) && (
             <Card>
               <StatusLine tone="error">Can&apos;t reach Mezo testnet.</StatusLine>
               <SecondaryButton
                 onClick={() => {
                   reads.refetch();
+                  recovery.refetch();
                   fee.refetch();
                 }}
               >
@@ -587,7 +647,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
               <ReceiptLine label="Debt" value={formatMusd(trove.debtWei) + " MUSD"} />
               <RatioMeter
                 nowE18={icrE18(trove.collWei, priceE18, trove.debtWei)}
-                afterE18={q.icrAfterE18 ?? icrE18(trove.collWei, priceE18, trove.debtWei)}
+                afterE18={("icrAfterE18" in q ? q.icrAfterE18 : null) ?? icrE18(trove.collWei, priceE18, trove.debtWei)}
               />
             </Card>
           )}
@@ -618,25 +678,27 @@ function CheckoutFor({ link }: { link: PayLink }) {
                     customers can&apos;t pay you until you activate payments again on the Merchant page.
                   </StatusLine>
                 )}
-              <div className={ui.field}>
-                <label htmlFor="min-icr" className={ui.fieldLabel}>
-                  Keep my ratio above
-                </label>
-                <span className={ui.inputWrap}>
-                  <select
-                    id="min-icr"
-                    className={ui.input}
-                    value={minIcr.toString()}
-                    onChange={(e) => setMinIcr(BigInt(e.target.value))}
-                  >
-                    {MIN_ICR_CHOICES.map((c) => (
-                      <option key={c.label} value={c.value.toString()}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              </div>
+              {q.borrowWei > 0n && (
+                <div className={ui.field}>
+                  <label htmlFor="min-icr" className={ui.fieldLabel}>
+                    Keep my ratio above
+                  </label>
+                  <span className={ui.inputWrap}>
+                    <select
+                      id="min-icr"
+                      className={ui.input}
+                      value={minIcr.toString()}
+                      onChange={(e) => setMinIcr(BigInt(e.target.value))}
+                    >
+                      {MIN_ICR_CHOICES.map((c) => (
+                        <option key={c.label} value={c.value.toString()}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                  </span>
+                </div>
+              )}
               <PrimaryButton loading={busy} loadingLabel={loadingLabel} onClick={pay}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
@@ -656,6 +718,30 @@ function CheckoutFor({ link }: { link: PayLink }) {
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
               <SecondaryButton href={OPEN_TROVE_URL}>Add collateral on Mezo</SecondaryButton>
+              {staleLine}
+            </Card>
+          )}
+
+          {q?.state === "blocked_capacity" && (
+            <Card>
+              <p>Your Trove&apos;s borrow limit was set when it was opened, and this payment is above it.</p>
+              <ReceiptLine label="You can borrow at most" value={formatMusd(q.maxBorrowWei) + " MUSD"} />
+              {q.canRefinance && <p>Refinance your Trove to raise it.</p>}
+              <PrimaryButton disabled disabledReason="This is above your Trove's borrow limit." onClick={() => undefined}>
+                Pay {formatMusd(link.amountWei)} MUSD
+              </PrimaryButton>
+              {staleLine}
+            </Card>
+          )}
+
+          {q?.state === "blocked_recovery" && (
+            <Card>
+              <p>Mezo is in Recovery Mode, so borrowing is paused.</p>
+              <ReceiptLine label="You can still pay from balance" value={formatMusd(q.fromBalanceWei) + " MUSD"} />
+              <PrimaryButton disabled disabledReason="Borrowing is paused. Try again later." onClick={() => undefined}>
+                Pay {formatMusd(link.amountWei)} MUSD
+              </PrimaryButton>
+              {staleLine}
             </Card>
           )}
 

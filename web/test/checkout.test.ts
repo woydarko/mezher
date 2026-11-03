@@ -1,7 +1,8 @@
 import type { Hex } from "viem";
 import { describe, expect, it } from "vitest";
 import { checkoutReducer, isSmartAccount, permitPlan, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
-import { errorCopy } from "@/lib/errors";
+import { BaseError, ContractFunctionRevertedError, encodeErrorResult } from "viem";
+import { errorCode, errorCopy } from "@/lib/errors";
 
 const A = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
 const B = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -119,5 +120,27 @@ describe("permitPlan", () => {
   it("skips the permit and spends the allowance down when it already covers it (permit would overwrite a merchant budget)", () => {
     expect(permitPlan(5n, 5n)).toEqual({ needed: false, remainingWei: 0n });
     expect(permitPlan(10_000n, 5n)).toEqual({ needed: false, remainingWei: 9_995n });
+  });
+});
+
+describe("errorCode with Mezo revert strings", () => {
+  const abi = [{ type: "error", name: "Error", inputs: [{ name: "message", type: "string" }] }] as const;
+  const revertWith = (message: string) =>
+    new BaseError("call failed", {
+      cause: new ContractFunctionRevertedError({
+        abi,
+        functionName: "pay",
+        data: encodeErrorResult({ abi, errorName: "Error", args: [message] }),
+      }),
+    });
+
+  it.each([
+    ["BorrowerOps: Operation not permitted during Recovery Mode", "Mezo is in Recovery Mode, so borrowing is paused. Pay from your balance or try again later."],
+    ["BorrowerOps: An operation that exceeds maxBorrowingCapacity is not permitted", "This is above your Trove's borrow limit. Refinance your Trove to raise it."],
+    ["BorrowerOps: An operation that would result in ICR < MCR is not permitted", "Your Trove would drop below Mezo's safe ratio. Pay less or add collateral on Mezo."],
+  ])("turns the revert string %s into copy", (reason, copy) => {
+    const code = errorCode(revertWith(reason));
+    expect(code).toBe(reason);
+    expect(errorCopy(code)).toBe(copy);
   });
 });
