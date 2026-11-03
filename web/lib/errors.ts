@@ -30,7 +30,11 @@ const COPY: [match: string, copy: string][] = [
   ["relayer_unavailable", "Our gas relay is down. Pay with your own gas instead."],
   ["already_relayed", "This payment was already sent. Check your wallet activity before paying again."],
   ["Signature expired", "Your signature expired. Press Pay again."],
-  ["Invalid signature", "Your signature did not match this payment. Press Pay again."],
+  // Mezo's nonce moved. A borrow signature used on its own already paid the shop, so "pay again" could pay twice.
+  [
+    "Invalid signature",
+    "Your Mezo signature is no longer valid, so it may already have been used. Check your Trove debt and ask the shop if it got the money before you pay again.",
+  ],
   ["User rejected", "You cancelled the signature. Press Pay when you are ready."],
 ];
 

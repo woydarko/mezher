@@ -88,6 +88,11 @@ describe("errorCopy", () => {
     ["rate_limited", "Too many attempts. Wait a minute and try again."],
     ["relayer_unavailable", "Our gas relay is down. Pay with your own gas instead."],
     ["Signature expired", "Your signature expired. Press Pay again."],
+    // A borrow signature used on its own already paid the shop, so this must not simply say "pay again".
+    [
+      "BorrowerOperationsSignatures: Invalid signature",
+      "Your Mezo signature is no longer valid, so it may already have been used. Check your Trove debt and ask the shop if it got the money before you pay again.",
+    ],
   ])("maps %s", (code, copy) => {
     expect(errorCopy(code)).toBe(copy);
   });
