@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Mezher: pay with your Bitcoin, keep your Bitcoin. 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC makes 12 MUSD for the merchant." width="100%">
+  <img src="docs/assets/banner.svg" alt="Mezher: pay with your Bitcoin, keep your Bitcoin. 5 MUSD from your wallet plus 7 MUSD borrowed against your BTC pays 12 MUSD; the merchant nets 11.94 after the 0.5% fee." width="100%">
 </p>
 
 
@@ -12,7 +12,7 @@
   <a href="https://mezher.vercel.app"><b>Live app</b></a> ·
   <a href="https://mezher.vercel.app/try">Try it</a> ·
   <a href="https://mezher.vercel.app/proof">Proof</a> ·
-  <a href="https://explorer.test.mezo.org/address/0xF113519362677fc0BDE15B172FF22DD8dB30aF27?tab=contract">Contract v2 (verified)</a> ·
+  <a href="https://explorer.test.mezo.org/address/0xF113519362677fc0BDE15B172FF22DD8dB30aF27?tab=contract">Contract v2 (verified, partial match)</a> ·
   <a href="https://explorer.test.mezo.org/tx/0xbd5855f0d7c0a322c584597f81296e0be3a56c434c50c378879ef6b17336dfd0">Open Trove and pay on testnet</a> ·
   <a href="https://www.youtube.com/watch?v=Y6cAobzL7g8">Wave 1 demo video</a> ·
   <a href="https://drive.google.com/file/d/1n_nNus2p2HWk6ShxbhdL81uJr6z7KvDw/view?usp=sharing">Wave 1 deck</a> ·
@@ -44,8 +44,8 @@ People who hold Bitcoin on Mezo can borrow MUSD against it, but spending that cr
 
 That is one reason. The Mezo mainnet data shows another, and it is not only about having somewhere to spend ([commands and numbers](docs/evidence.md#why-it-matters-mezo-mainnet-numbers), read on 3 Nov 2026):
 
-- **Little MUSD reaches users through Troves.** Of 29.5M MUSD, 14.2M sits in the Stability Pool; Troves hold 18.6k MUSD of debt across 3 open Troves.
-- **Troves have been redeemed away.** Open Troves went from 104 (block 5,000,000, 30 Nov 2025) to 43 (14 Jul 2026) to 1 (25 Oct 2026). The Mezo explorer lists 991 `redeemCollateral` calls among the newest 1,000 transactions sent to the TroveManager (16 Jul to 28 Oct 2026); 279 are marked successful and the rest show "awaiting internal transactions", not a known revert. We did not establish why people redeem, and we did not verify claims in other teams' READMEs that MUSD trades near $0.989.
+- **Little MUSD reaches users through Troves.** Of 29.5M MUSD, 14.2M (48%) sits in the Stability Pool; Troves hold 18.6k MUSD of debt across 3 open Troves.
+- **Many Troves were closed by redemptions.** Open Troves went from 104 (block 5,000,000, 30 Nov 2025) to 43 (14 Jul 2026) to 1 (25 Oct 2026); we did not examine the 104 to 43 period. In the newest 1,000 transactions sent to the TroveManager (16 Jul to 28 Oct 2026) there are 991 `redeemCollateral` calls: 279 succeeded and 712 reverted (receipt status 0). The 279 redeemed 2,308,919 MUSD for 31.72 BTC from 17 senders and closed 58 Troves (34 distinct borrowers). We did not establish why people redeem, and we did not verify claims in other teams' READMEs that MUSD trades near $0.989.
 
 **What redemption means for a Mezher payer.** Anyone can swap MUSD for BTC against the lowest-ratio Troves first. That cuts the Trove's debt and its BTC, so a borrower with a thin ratio can lose BTC at face value without being liquidated. Borrowing to pay does not cause it, but a payment that lowers your ratio moves your Trove closer to the front of that queue.
 
@@ -61,10 +61,10 @@ Mezher turns the purchase into one checkout:
 ## How it works
 
 <p align="center">
-  <img src="docs/assets/flow.svg" alt="Flow: 1 merchant makes a link, 2 payer signs a permit for 5 MUSD and a borrow of 7 MUSD to the merchant, 3 relayer sends MezherPay.pay, 4 MUSD moves 5 from the payer's balance to the merchant, 5 Mezo borrows 7 from the Trove straight to the merchant, 6 the Trove ratio must stay at least 150% or everything reverts, 7 the merchant has 12 MUSD and the payer keeps the BTC." width="100%">
+  <img src="docs/assets/flow.svg" alt="Flow for a 20 MUSD order: 1 merchant makes a link, 2 payer signs an order, a permit for 8 MUSD and a borrow of 12 MUSD to the merchant, 3 relayer sends MezherPay.pay and pays the gas, 4 MUSD moves 8 from the payer's balance to the merchant, 5 Mezo borrows 12 from the Trove straight to the merchant, 6 the Trove ratio must stay at least 150% or everything reverts, 7 the merchant nets 19.90 MUSD after the 0.10 fee and the payer keeps the BTC; Paid carries the fee." width="100%">
 </p>
 
-The picture shows a 5 + 7 split and still illustrates the idea, but it is from Wave 1. In v2 the payer also signs an order (two signatures when the allowance already covers the balance part, otherwise three) and the merchant receives the amount minus the 0.5% fee.
+The picture shows a 20 MUSD order split 8 + 12 in v2. The banner shows an illustrative 5 + 7 = 12 split; in v2 the merchant receives the amount minus the 0.5% fee. The payer signs one to three messages: always the order, a permit if the balance part is not already allowed, and Mezo's borrow signature if anything is borrowed.
 
 1. **The merchant creates a link** on `/merchant`, with an amount and an order id (and a QR code for a counter). The merchant activates payments once with a signed permit that allows the fee (50 bps).
 2. **The payer opens it** on `/pay` and sees the exact split: what comes from their MUSD balance, what gets borrowed, Mezo's 0.1% fee, their collateral ratio before and after, and where the Trove sits in the redemption queue.
@@ -108,7 +108,7 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 
 | Contract | Address |
 | --- | --- |
-| **MezherPay v2** | [`0xF113519362677fc0BDE15B172FF22DD8dB30aF27`](https://explorer.test.mezo.org/address/0xF113519362677fc0BDE15B172FF22DD8dB30aF27?tab=contract) (source verified, block 16544459, [deploy tx](https://explorer.test.mezo.org/tx/0x529f2cd5dab578f4fe57df3a14ffb2adb79e2197ee95af62182e8718e0c80b8a), fee 50 bps) |
+| **MezherPay v2** | [`0xF113519362677fc0BDE15B172FF22DD8dB30aF27`](https://explorer.test.mezo.org/address/0xF113519362677fc0BDE15B172FF22DD8dB30aF27?tab=contract) (source verified as a partial match, block 16544459, [deploy tx](https://explorer.test.mezo.org/tx/0x529f2cd5dab578f4fe57df3a14ffb2adb79e2197ee95af62182e8718e0c80b8a), fee 50 bps) |
 | MezherPay v1 (Wave 1, superseded) | [`0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b`](https://explorer.test.mezo.org/address/0x80ddA1a82Bb291348d4b5Ef33FAc10819071f58b?tab=contract) |
 | MUSD | `0x118917a40FAF1CD7a13dB0Ef56C86De7973Ac503` |
 | BorrowerOperationsSignatures | `0xD757e3646AF370b15f32EB557F0F8380Df7D639e` |
@@ -124,10 +124,10 @@ Mezo testnet (chain id `31611`, RPC `https://rpc.test.mezo.org`).
 
 | Path | Tx |
 | --- | --- |
-| `openAndPay`: 1,800 MUSD Trove opened, 20 MUSD paid, payer paid the gas | [`0xbd5855f0…`](https://explorer.test.mezo.org/tx/0xbd5855f0d7c0a322c584597f81296e0be3a56c434c50c378879ef6b17336dfd0) |
-| Split `pay` via relayer: 1,785 MUSD = 1,780 balance + 5 borrowed | [`0x82dc5bd3…`](https://explorer.test.mezo.org/tx/0x82dc5bd34e8a0b0a28aef153dc254d734293ede829c061ced1310904847c831d) |
+| `openAndPay`: 1,800 MUSD Trove opened, 20 MUSD paid, payer paid the gas; a permit (Approval of 20) | [`0xbd5855f0…`](https://explorer.test.mezo.org/tx/0xbd5855f0d7c0a322c584597f81296e0be3a56c434c50c378879ef6b17336dfd0) |
+| Split `pay` via relayer: 1,785 MUSD = 1,780 balance + 5 borrowed; a permit (Approval of 1,780) | [`0x82dc5bd3…`](https://explorer.test.mezo.org/tx/0x82dc5bd34e8a0b0a28aef153dc254d734293ede829c061ced1310904847c831d) |
 | Fully borrowed `pay` via relayer: 20 MUSD | [`0xbb14adf9…`](https://explorer.test.mezo.org/tx/0xbb14adf9d23f25d1bf5b1b9d9d1fb816c1d1a42bd2ae51b96efd090a6a77518c) |
-| Balance-only `pay` via relayer: 20 MUSD, a self-payment by the demo merchant wallet | [`0x0b1cbd3b…`](https://explorer.test.mezo.org/tx/0x0b1cbd3b070911af42a36f4a45a9336cb11d3163186f134239ef769045fb9948) |
+| Balance-only `pay` via relayer: 20 MUSD, a self-payment by the demo merchant wallet; no permit, it used the existing activation allowance | [`0x0b1cbd3b…`](https://explorer.test.mezo.org/tx/0x0b1cbd3b070911af42a36f4a45a9336cb11d3163186f134239ef769045fb9948) |
 
 **Outside users so far: 0.** `/proof` currently labels the wallet `0xeff1…abf4` as "outside", but it is a team wallet (it sent the `openAndPay` above). The real outside-payer count is the number `/proof` shows minus one. We chose not to redeploy for the label.
 
@@ -235,7 +235,7 @@ docs/
 
 **Next**
 - Order lookup and merchant notifications (needs a small database).
-- Pay for APIs and agents over x402 with borrowed MUSD.
+- Pay for APIs and agents over x402-style requests with borrowed MUSD.
 - A professional audit before any mainnet deployment.
 
 ## Credits

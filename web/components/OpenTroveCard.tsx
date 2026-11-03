@@ -38,6 +38,7 @@ export function OpenTroveCard({
   busy,
   busyLabel,
   error,
+  closed,
   onOpen,
 }: {
   payer: Address;
@@ -46,6 +47,8 @@ export function OpenTroveCard({
   busy: boolean;
   busyLabel: string;
   error?: string;
+  /** The payer's last Trove is closed (not "no Trove yet"). */
+  closed?: boolean;
   onOpen: (a: OpenRequest) => void;
 }) {
   const btc = useBalance({ address: payer, chainId: MEZO_TESTNET.id });
@@ -84,7 +87,7 @@ export function OpenTroveCard({
   return (
     <Card title="Your Bitcoin credit">
       <p>
-        Your MUSD balance is {formatMusd(shortfallWei)} MUSD short and you have no Trove yet. Open one here: lock BTC,
+        Your MUSD balance is {formatMusd(shortfallWei)} MUSD short and {closed ? "your last Trove is closed" : "you have no Trove yet"}. Open one here: lock BTC,
         borrow MUSD, and pay, all in one transaction. You sign two or three messages first (the MUSD permit is skipped when your allowance already covers the payment), then pay the network fee in BTC.
       </p>
       <Field

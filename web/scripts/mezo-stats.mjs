@@ -75,8 +75,11 @@ for (const b of [5_000_000n, 10_400_000n, 12_400_000n, 12_749_209n]) {
   }
 }
 
-// redeemCollateral calls to the TroveManager, from the Mezo explorer API (the newest 1,000 transactions at most).
-// The indexer marks many as "error: awaiting_internal_transactions", which is not a revert, so only "success" is counted as sure.
+// redeemCollateral calls to the TroveManager: hashes from the Mezo explorer API (newest 1,000 transactions at most),
+// outcomes from the receipts on the RPC. The explorer's own status ("error: awaiting_internal_transactions") is NOT used:
+// receipts show those calls reverted (status 0x0, no logs).
+const REDEMPTION_TOPIC = "0x43a3f4082a4dbc33d78e317d2497d3a730bc7fc3574159dcea1056e62e5d9ad8"; // Redemption(attempted, actual, collateralSent, fee)
+const TROVE_UPDATED_TOPIC = "0x85a52d2a9df6d50beea0d12f454309d08739d01fde1aa65491f68b92367297b4"; // borrower indexed; 7 data words, last = operation
 try {
   const base = `https://api.explorer.mezo.org/api/v2/addresses/${TROVE_MANAGER}/transactions?filter=to`;
   const txs = [];
@@ -87,11 +90,36 @@ try {
     if (!j.next_page_params) break;
     q = "&" + new URLSearchParams(Object.entries(j.next_page_params).map(([k, v]) => [k, String(v)]));
   }
-  const red = txs.filter((t) => t.method === "redeemCollateral");
   const dates = txs.map((t) => t.timestamp).sort();
-  console.log(
-    `redeemCollateral in the newest ${txs.length} TroveManager txs (${dates[0]?.slice(0, 10)} to ${dates.at(-1)?.slice(0, 10)}): ${red.length}, of which ${red.filter((t) => t.status === "ok").length} marked success`,
-  );
+  const red = txs.filter((t) => t.method === "redeemCollateral");
+  const receipts = [];
+  for (let i = 0; i < red.length; i += 50) {
+    const batch = red.slice(i, i + 50).map((t, k) => ({ jsonrpc: "2.0", id: k, method: "eth_getTransactionReceipt", params: [t.hash] }));
+    const out = await (await fetch(RPC, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(batch) })).json();
+    for (const o of out) receipts.push({ tx: red[o.id], r: o.result });
+  }
+  let ok = 0, reverted = 0, missing = 0, musd = 0n, btc = 0n, closures = 0;
+  const senders = new Set(), borrowers = new Set();
+  for (const { tx, r } of receipts) {
+    if (!r) { missing++; continue; }
+    if (r.status !== "0x1") { reverted++; continue; }
+    ok++;
+    senders.add(r.from.toLowerCase());
+    for (const l of r.logs) {
+      if (l.address.toLowerCase() !== TROVE_MANAGER.toLowerCase()) continue;
+      const w = l.data.slice(2).match(/.{64}/g) ?? [];
+      if (l.topics[0] === REDEMPTION_TOPIC) { musd += BigInt("0x" + w[1]); btc += BigInt("0x" + w[2]); }
+      if (l.topics[0] === TROVE_UPDATED_TOPIC && w.length === 7 && BigInt("0x" + w[0]) === 0n && BigInt("0x" + w[1]) === 0n && BigInt("0x" + w[6]) === 2n) {
+        closures++;
+        borrowers.add(l.topics[1]);
+      }
+    }
+  }
+  const other = txs.length - red.length;
+  console.log(`TroveManager txs read: ${txs.length} (${dates[0]?.slice(0, 10)} to ${dates.at(-1)?.slice(0, 10)}; older ones are not counted); ${other} are liquidations`);
+  console.log(`redeemCollateral calls: ${red.length}: ${ok} succeeded, ${reverted} reverted (receipt status 0)${missing ? `, ${missing} receipts not found` : ""}`);
+  console.log(`  the ${ok} that succeeded redeemed ${Number(formatUnits(musd, 18)).toLocaleString("en-US", { maximumFractionDigits: 0 })} MUSD for ${Number(formatUnits(btc, 18)).toFixed(2)} BTC, from ${senders.size} senders`);
+  console.log(`  they closed ${closures} Troves (TroveUpdated with debt 0, operation 2), ${borrowers.size} distinct borrowers`);
 } catch (e) {
-  console.log(`redeemCollateral count unavailable: ${e.message}`);
+  console.log(`redemption numbers unavailable: ${e.message}`);
 }

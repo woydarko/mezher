@@ -572,6 +572,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
               busy={busy}
               busyLabel={loadingLabel}
               error={state.step === "failed" ? state.error : undefined}
+              closed={Boolean(trove && trove.status > 1)}
               onOpen={openAndPay}
             />
           )}

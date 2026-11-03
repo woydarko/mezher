@@ -11,8 +11,8 @@ import l from "./landing.module.css";
 
 const SAFETY = [
   {
-    title: "Never below 150%",
-    body: "If paying would push your Trove's ratio under 150%, the MezherPay contract refuses the whole payment.",
+    title: "A 150% floor on Mezher payments",
+    body: "If paying would push your Trove's ratio under 150%, the MezherPay contract refuses the whole payment. A Mezo borrow signature used alone, outside Mezher, skips this floor.",
   },
   {
     title: "Only to the shop you signed for",
