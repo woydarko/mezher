@@ -41,6 +41,14 @@ contract MezherPayHandler is Test {
     uint256 public ghostDebt;
     uint256 public ghostBorrowsBelowFloor;
     uint256 public ghostRedirects;
+    uint256 public ghostOpens;
+    uint256 public ghostOpenCollateral;
+    uint256 public ghostOpenerShortfall;
+
+    uint256 internal constant OPEN_DEBT = 2_000e18;
+
+    /// @dev Each opener is a fresh account: Mezo allows one active Trove per borrower.
+    uint256 internal nextOpener;
 
     constructor(MezherPay mezherPay_, MockMUSD musd_, MockBorrowerOps bos_, MockTroveManager troveManager_) {
         mezherPay = mezherPay_;
@@ -152,6 +160,69 @@ contract MezherPayHandler is Test {
         } catch {}
     }
 
+    /// @notice No Trove yet: a fresh payer opens one with BTC and pays from what it minted, sending the tx itself.
+    ///         `tamper` sends a BTC value other than the signed one, which Mezo's signature rejects.
+    function openAndPay(uint256 amount, uint256 coll, bool tamper) external {
+        amount = bound(amount, 1, 50e18);
+        coll = bound(coll, 1, 10 ether);
+        uint256 deadline = block.timestamp + 15 minutes;
+        (address opener, uint256 pk) = makeAddrAndKey(string.concat("opener", vm.toString(nextOpener++)));
+
+        MezherPay.Order memory o = _order(merchant, amount, amount, deadline);
+        o.payer = opener;
+        bytes memory sig = _orderSig(pk, o);
+        MezherPay.PermitSig memory permit = _openerPermit(pk, opener, amount, deadline);
+        MezherPay.OpenSig memory open = _openerOpen(pk, opener, coll, deadline);
+
+        uint256 sent = tamper ? coll + 1 : coll;
+        vm.deal(opener, sent);
+        vm.prank(opener);
+        try mezherPay.openAndPay{value: sent}(o, sig, permit, open) {
+            nextOrderId++;
+            ghostOpens++;
+            ghostOpenCollateral += sent;
+            ghostPaid += amount;
+            ghostFees += mezherPay.feeOf(amount);
+            if (musd.balanceOf(opener) != OPEN_DEBT - amount) ghostOpenerShortfall++;
+            if (troveManager.icr() < mezherPay.MIN_ICR_AFTER()) ghostBorrowsBelowFloor++;
+        } catch {
+            if (opener.balance != sent) ghostOpenerShortfall++; // a failed open returns all the BTC
+        }
+    }
+
+    function _openerPermit(uint256 pk, address opener, uint256 value, uint256 deadline)
+        internal
+        view
+        returns (MezherPay.PermitSig memory)
+    {
+        bytes32 structHash =
+            keccak256(abi.encode(PERMIT_TYPEHASH, opener, address(mezherPay), value, musd.nonces(opener), deadline));
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(pk, keccak256(abi.encodePacked("\x19\x01", musd.DOMAIN_SEPARATOR(), structHash)));
+        return MezherPay.PermitSig({deadline: deadline, v: v, r: r, s: s});
+    }
+
+    function _openerOpen(uint256 pk, address opener, uint256 coll, uint256 deadline)
+        internal
+        view
+        returns (MezherPay.OpenSig memory)
+    {
+        bytes32 structHash = keccak256(
+            abi.encodePacked(
+                bos.OPEN_TROVE_TYPEHASH(), abi.encode(coll, OPEN_DEBT, opener, opener), bos.getNonce(opener), deadline
+            )
+        );
+        (uint8 v, bytes32 r, bytes32 s) =
+            vm.sign(pk, keccak256(abi.encodePacked(hex"1901", bos.DOMAIN_SEPARATOR(), structHash)));
+        return MezherPay.OpenSig({
+            debtAmount: OPEN_DEBT,
+            upperHint: address(0),
+            lowerHint: address(0),
+            deadline: deadline,
+            signature: abi.encodePacked(r, s, v)
+        });
+    }
+
     /// @notice Moves the payer's ICR around the 150% floor.
     function setIcr(uint256 icr) external {
         troveManager.setIcr(bound(icr, 1.3e18, 3e18));
@@ -229,11 +300,23 @@ contract MezherPayInvariantTest is Test {
     function afterInvariant() public view {
         assertGt(handler.ghostPaid(), 0, "no honest payment settled");
         assertGt(handler.ghostDebt(), 0, "no borrow settled");
+        assertGt(handler.ghostOpens(), 0, "no openAndPay settled");
     }
 
-    /// @dev MezherPay never keeps MUSD between calls.
+    /// @dev MezherPay never keeps MUSD or BTC between calls.
     function invariant_holdsNoFunds() public view {
         assertEq(musd.balanceOf(address(mezherPay)), 0);
+        assertEq(address(mezherPay).balance, 0);
+    }
+
+    /// @dev All BTC of settled `openAndPay` calls sits in the Troves, and nothing else went there.
+    function invariant_openBtcEndsInTroves() public view {
+        assertEq(address(bos).balance, handler.ghostOpenCollateral());
+    }
+
+    /// @dev An opener keeps exactly the Trove's MUSD minus the payment; a failed open returns all its BTC.
+    function invariant_openerKeepsTheRest() public view {
+        assertEq(handler.ghostOpenerShortfall(), 0);
     }
 
     /// @dev Merchant plus treasury got exactly the sum of settled payments.
