@@ -69,7 +69,7 @@ describe("faucet", () => {
     expect((await h(req({ address: A }))).status).toBe(200);
     const second = await h(req({ address: B }));
     expect(second.status).toBe(429);
-    expect(await second.json()).toEqual({ error: "rate_limited" });
+    expect(await second.json()).toEqual({ error: "ip_claimed" });
     t += 24 * 3600_000 + 1;
     expect((await h(req({ address: B }))).status).toBe(200);
   });

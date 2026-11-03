@@ -64,7 +64,7 @@ export function createFaucetHandler(deps: FaucetDeps): (req: Request) => Promise
     const last = ipClaimedAt.get(ip);
     if (last !== undefined && now - last < DAY_MS) {
       log(ROUTE, 429, to);
-      return json(429, { error: "rate_limited" });
+      return json(429, { error: "ip_claimed" });
     }
     // global cap, counting claims still being sent
     claimTimes = claimTimes.filter((t) => now - t < HOUR_MS);

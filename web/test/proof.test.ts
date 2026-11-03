@@ -2,7 +2,7 @@ import type { Address, Hex } from "viem";
 import { describe, expect, it } from "vitest";
 import type { PaidLog } from "@/lib/paid-logs";
 import { buildTeamWallets, parseTeamWallets, summarizeProof, TEAM_WALLETS } from "@/lib/proof";
-import { tryScenario } from "@/lib/try";
+import { tryNote, tryScenarios, sponsored } from "@/lib/try";
 
 const TEAM = TEAM_WALLETS[0]!;
 const OUT1: Address = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
@@ -58,19 +58,37 @@ describe("parseTeamWallets", () => {
   });
 });
 
-describe("tryScenario", () => {
+describe("tryScenarios", () => {
   const m = (n: number) => BigInt(n) * 10n ** 18n;
-  it("no Trove opens one and pays 12", () => {
-    expect(tryScenario(false, m(1788))).toMatchObject({ kind: "open", amount: "12" });
+  const kinds = (hasTrove: boolean, bal: bigint) => tryScenarios(hasTrove, bal).map((s) => s.kind);
+  it("no Trove and little MUSD opens one and pays 20", () => {
+    expect(tryScenarios(false, m(3))).toMatchObject([{ kind: "open", amount: "20" }]);
   });
-  it("balance covers 12 pays from balance", () => {
-    expect(tryScenario(true, m(12))).toMatchObject({ kind: "balance", amount: "12" });
+  it("no Trove but 20 MUSD pays from balance instead of promising to open one", () => {
+    expect(tryScenarios(false, m(1788))).toMatchObject([{ kind: "balance", amount: "20" }]);
   });
-  it("some balance rounds up to a whole MUSD plus 5", () => {
-    expect(tryScenario(true, m(3) + 1n)).toMatchObject({ kind: "split", amount: "9" });
-    expect(tryScenario(true, m(11))).toMatchObject({ kind: "split", amount: "16" });
+  it("a Trove and 20 MUSD offers balance and a split that still borrows", () => {
+    expect(tryScenarios(true, m(20))).toMatchObject([
+      { kind: "balance", amount: "20" },
+      { kind: "split", amount: "25" },
+    ]);
+    expect(tryScenarios(true, m(1788) + 1n)).toMatchObject([{ kind: "balance" }, { kind: "split", amount: "1794" }]);
   });
-  it("empty balance borrows all", () => {
-    expect(tryScenario(true, 0n)).toMatchObject({ kind: "borrow", amount: "12" });
+  it("some balance under 20 rounds up to a whole MUSD plus 5", () => {
+    expect(tryScenarios(true, m(3) + 1n)).toMatchObject([{ kind: "split", amount: "9" }]);
+    expect(tryScenarios(true, m(11))).toMatchObject([{ kind: "split", amount: "16" }]);
+  });
+  it("empty balance borrows all 20", () => {
+    expect(tryScenarios(true, 0n)).toMatchObject([{ kind: "borrow", amount: "20" }]);
+  });
+  it("says a fully borrowed payment needs an empty balance only when there is a balance and a Trove", () => {
+    expect(tryNote(true, m(5))).toMatch(/empty balance/);
+    expect(tryNote(true, 0n)).toBeUndefined();
+    expect(tryNote(false, m(5))).toBeUndefined();
+    expect(kinds(true, m(5))).not.toContain("borrow");
+  });
+  it("20 MUSD is sponsored, the old 12 was not", () => {
+    expect(sponsored("20")).toBe(true);
+    expect(sponsored("12")).toBe(false);
   });
 });

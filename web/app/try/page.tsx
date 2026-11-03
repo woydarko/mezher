@@ -11,8 +11,9 @@ import { StatusLine } from "@/components/StatusLine";
 import { WalletButton } from "@/components/WalletButton";
 import { BITCOIN_WALLET_MESSAGE, isBitcoinConnector, isSmartAccount } from "@/lib/checkout";
 import { buildLink, randomOrder } from "@/lib/link";
-import { ADDRESSES, explorerTx, MEZO_TESTNET, musdAbi, troveManagerAbi } from "@/lib/mezo";
-import { sponsored, tryScenario } from "@/lib/try";
+import { formatMusd } from "@/lib/format";
+import { ADDRESSES, explorerTx, MEZO_TESTNET, MIN_SPONSORED_WEI, musdAbi, troveManagerAbi } from "@/lib/mezo";
+import { tryNote, tryScenarios } from "@/lib/try";
 
 const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
 const MEZO_FAUCET = "https://faucet.test.mezo.org/";
@@ -21,6 +22,7 @@ const FAUCET_ERRORS: Record<string, string> = {
   already_claimed: "This wallet already claimed from our faucet. If it has no test BTC, use the Mezo faucet below.",
   already_funded: "This wallet already has enough test BTC, so you can skip this step.",
   rate_limited: "Too many tries from your network. Wait a minute and try again.",
+  ip_claimed: "Someone on your network already used our faucet today, and it allows one claim per network per day. Use the Mezo faucet below.",
   invalid_input: "That wallet address was not accepted.",
 };
 
@@ -40,7 +42,7 @@ function Faucet({ address }: { address: string }) {
         setState({
           busy: false,
           error: FAUCET_ERRORS[body.error ?? ""] ?? "The faucet could not send right now.",
-          fallback: body.error === "already_claimed",
+          fallback: body.error === "already_claimed" || body.error === "ip_claimed",
         });
     } catch {
       setState({ busy: false, error: "Can't reach the faucet. Try again." });
@@ -80,13 +82,15 @@ function Scenario({ address }: { address: `0x${string}` }) {
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [address] },
     ],
   });
-  const s = reads.data ? tryScenario(Number(reads.data[0]) === 1, reads.data[1]) : null;
+  const hasTrove = reads.data ? Number(reads.data[0]) === 1 : false;
+  const scenarios = reads.data ? tryScenarios(hasTrove, reads.data[1]) : [];
+  const note = reads.data ? tryNote(hasTrove, reads.data[1]) : undefined;
   const [linkError, setLinkError] = useState<string>();
 
   // the order id is made on click, so going back to this page never reuses a settled order
-  function pay() {
-    if (!s || !DEMO_MERCHANT) return;
-    const link = buildLink(window.location.origin, { to: DEMO_MERCHANT, amount: s.amount, order: randomOrder(), label: "Mezher try" });
+  function pay(amount: string) {
+    if (!DEMO_MERCHANT) return;
+    const link = buildLink(window.location.origin, { to: DEMO_MERCHANT, amount, order: randomOrder(), label: "Mezher try" });
     if (link.ok) window.location.assign(link.url);
     else setLinkError(link.message);
   }
@@ -95,16 +99,19 @@ function Scenario({ address }: { address: `0x${string}` }) {
     <Card title="2. Make a payment">
       {reads.isLoading && <StatusLine tone="info">Reading your wallet from Mezo testnet…</StatusLine>}
       {reads.isError && <StatusLine tone="error">Can&apos;t reach Mezo testnet. Retrying every 15 seconds.</StatusLine>}
-      {s && (
-        <>
+      {scenarios.map((s) => (
+        <div key={s.kind}>
           <h3>{s.title}</h3>
           <p>{s.text}</p>
-          {!sponsored(s.amount) && <p>Payments under 10 MUSD use your own gas instead of ours.</p>}
-          {!DEMO_MERCHANT && <StatusLine tone="error">Demo merchant not configured.</StatusLine>}
-          {linkError && <StatusLine tone="error">{linkError}</StatusLine>}
-          {DEMO_MERCHANT && <PrimaryButton onClick={pay}>Pay {s.amount} MUSD</PrimaryButton>}
-        </>
-      )}
+          {BigInt(s.amount) * 10n ** 18n < MIN_SPONSORED_WEI && (
+            <p>Payments under {formatMusd(MIN_SPONSORED_WEI)} MUSD use your own gas instead of ours.</p>
+          )}
+          {DEMO_MERCHANT && <PrimaryButton onClick={() => pay(s.amount)}>Pay {s.amount} MUSD</PrimaryButton>}
+        </div>
+      ))}
+      {note && <p>{note}</p>}
+      {reads.data && !DEMO_MERCHANT && <StatusLine tone="error">Demo merchant not configured.</StatusLine>}
+      {linkError && <StatusLine tone="error">{linkError}</StatusLine>}
     </Card>
   );
 }
@@ -154,8 +161,8 @@ export default function TryPage() {
           <ol>
             <li>Get test BTC from our faucet (or the Mezo faucet).</li>
             <li>
-              Pay 12 MUSD to a demo merchant. With no Trove, checkout opens one for you. With a Trove and enough MUSD,
-              it pays from your balance. With a little MUSD, it uses that first and borrows the rest. With none, it
+              Pay 20 MUSD to a demo merchant. With no Trove, checkout opens one for you. With a Trove and enough MUSD,
+              it pays from your balance, or part balance and part borrowed. With a little MUSD, it uses that first and borrows the rest. With none, it
               borrows all of it.
             </li>
             <li>
