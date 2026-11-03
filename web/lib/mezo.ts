@@ -1,6 +1,7 @@
 import { defineChain, type Address, type Hex } from "viem";
 
 export { mezherPayAbi } from "./abi/MezherPay";
+import { mezherPayAbi } from "./abi/MezherPay";
 
 const EXPLORER_URL = "https://explorer.test.mezo.org";
 
@@ -31,6 +32,9 @@ export const ADDRESSES = {
 
 /** Fee allowance a merchant grants MezherPay in one activation permit: 10,000 MUSD. */
 export const ACTIVATION_BUDGET_WEI = 10_000n * 10n ** 18n;
+
+/** 10 MUSD: break-even from measured v1 gas, recomputed in Task 8. Below it the payer uses their own gas. */
+export const MIN_SPONSORED_WEI = 10n * 10n ** 18n;
 
 /** First block to scan for Paid events (the MezherPay deploy block). */
 export const MEZHER_PAY_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK || "0");
@@ -76,6 +80,40 @@ export const musdAbi = [
     outputs: [],
   },
 ] as const;
+
+// MUSD reverts with OZ errors; with them in the ABI viem names the revert for wallet-sent and relayed calls alike.
+const ozErrors = [
+  {
+    type: "error",
+    name: "ERC20InsufficientBalance",
+    inputs: [
+      { name: "sender", type: "address" },
+      { name: "balance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+  {
+    type: "error",
+    name: "ERC20InsufficientAllowance",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "allowance", type: "uint256" },
+      { name: "needed", type: "uint256" },
+    ],
+  },
+  {
+    type: "error",
+    name: "ERC2612InvalidSigner",
+    inputs: [
+      { name: "signer", type: "address" },
+      { name: "owner", type: "address" },
+    ],
+  },
+  { type: "error", name: "ERC2612ExpiredSignature", inputs: [{ name: "deadline", type: "uint256" }] },
+] as const;
+
+/** MezherPay ABI plus the MUSD errors its calls can bubble up; use for writes and simulations. */
+export const mezherPayCallAbi = [...mezherPayAbi, ...ozErrors] as const;
 
 export const borrowerOpsSignaturesAbi = [
   {

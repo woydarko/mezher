@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import { describe, expect, it } from "vitest";
-import { checkoutReducer, isSmartAccount, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isSmartAccount, permitPlan, type BorrowSig, type CheckoutState, type PermitSig } from "@/lib/checkout";
 import { errorCopy } from "@/lib/errors";
 
 const A = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
@@ -80,6 +80,9 @@ describe("errorCopy", () => {
     ["OrderExpired", "This payment request expired. Press Pay again."],
     ["BadOrderSignature", "Your signature did not match this payment. Press Pay again."],
     ["ERC20InsufficientAllowance", "This shop can't take payments right now. Ask the shop to activate payments, then try again."],
+    ["activate_relay_down", "Our gas relay is down. Try again in a minute."],
+    ["ERC2612InvalidSigner", "Your signature did not match this wallet. Press Activate again."],
+    ["ERC2612ExpiredSignature", "Your signature expired. Press Activate again."],
     ["own_gas_required", "This payment is too small for free gas. Pay with your own gas."],
     ["rate_limited", "Too many attempts. Wait a minute and try again."],
     ["relayer_unavailable", "Our gas relay is down. Pay with your own gas instead."],
@@ -104,5 +107,17 @@ describe("isSmartAccount", () => {
 
   it("treats an EIP-7702 delegated EOA as an EOA", async () => {
     expect(await isSmartAccount(client(("0xef0100" + "ab".repeat(20)) as Hex), A)).toBe(false);
+  });
+});
+
+describe("permitPlan", () => {
+  it("signs a permit when the allowance cannot cover the balance part", () => {
+    expect(permitPlan(0n, 5n)).toEqual({ needed: true, remainingWei: 0n });
+    expect(permitPlan(4n, 5n)).toEqual({ needed: true, remainingWei: 0n });
+  });
+
+  it("skips the permit and spends the allowance down when it already covers it (permit would overwrite a merchant budget)", () => {
+    expect(permitPlan(5n, 5n)).toEqual({ needed: false, remainingWei: 0n });
+    expect(permitPlan(10_000n, 5n)).toEqual({ needed: false, remainingWei: 9_995n });
   });
 });

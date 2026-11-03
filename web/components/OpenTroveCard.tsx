@@ -5,7 +5,7 @@ import { parseUnits, type Address } from "viem";
 import { useBalance, useReadContract } from "wagmi";
 import { formatMusd, formatRatio } from "@/lib/format";
 import { ADDRESSES, MEZO_TESTNET, borrowerOperationsAbi } from "@/lib/mezo";
-import { GAS_COMPENSATION_WEI, MIN_NET_DEBT_WEI, collateralFor, openTroveQuote } from "@/lib/trove";
+import { GAS_COMPENSATION_WEI, MIN_NET_DEBT_WEI, collateralFor, openTroveQuote, roundUpCents } from "@/lib/trove";
 import { Card } from "./Card";
 import { Field } from "./Field";
 import { PrimaryButton } from "./PrimaryButton";
@@ -51,7 +51,9 @@ export function OpenTroveCard({
 }) {
   const btc = useBalance({ address: payer, chainId: MEZO_TESTNET.id });
 
-  const firstDebt = shortfallWei > MIN_NET_DEBT_WEI ? shortfallWei : MIN_NET_DEBT_WEI;
+  // Rounded up to the 2 decimals the field shows, so the pre-filled borrow always covers the shortfall.
+  const needWei = roundUpCents(shortfallWei);
+  const firstDebt = needWei > MIN_NET_DEBT_WEI ? needWei : MIN_NET_DEBT_WEI;
   const [debt, setDebt] = useState(() => formatMusd(firstDebt, 2).replace(/,/g, ""));
   const [coll, setColl] = useState(() => {
     const total = firstDebt + (firstDebt * FEE_ESTIMATE_E18) / 10n ** 18n + GAS_COMPENSATION_WEI;
@@ -76,7 +78,7 @@ export function OpenTroveCard({
 
   let blocker: string | undefined;
   if (debtWei === null || collWei === null) blocker = "Enter amounts as plain numbers, like 1800 or 0.05.";
-  else if (debtWei < shortfallWei) blocker = "Borrow at least " + formatMusd(shortfallWei) + " MUSD to cover this payment.";
+  else if (debtWei < shortfallWei) blocker = "Borrow at least " + formatMusd(needWei) + " MUSD to cover this payment.";
   else if (q?.state === "debt_too_small") blocker = "Mezo's minimum borrow is 1,800 MUSD.";
   else if (q?.state === "not_enough_btc")
     blocker = "You can lock at most " + formatMusd(q.maxCollWei, 4) + " BTC and keep enough for the network fee.";
@@ -87,7 +89,7 @@ export function OpenTroveCard({
     <Card title="Your Bitcoin credit">
       <p>
         Your MUSD balance is {formatMusd(shortfallWei)} MUSD short and you have no Trove yet. Open one here: lock BTC,
-        borrow MUSD, and pay, all in one transaction. You sign three messages first.
+        borrow MUSD, and pay, all in one transaction. You sign three messages first, then pay the network fee in BTC.
       </p>
       <Field
         label="BTC to lock"

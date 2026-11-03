@@ -6,6 +6,7 @@ import {
   OPEN_GAS_RESERVE_WEI,
   collateralFor,
   openTroveQuote,
+  roundUpCents,
 } from "@/lib/trove";
 
 const E18 = 10n ** 18n;
@@ -55,5 +56,17 @@ describe("collateralFor", () => {
     const coll = collateralFor(total, PRICE, target);
     expect(icrE18(coll, PRICE, total) >= target).toBe(true);
     expect(icrE18(coll - 1n, PRICE, total) < target).toBe(true);
+  });
+});
+
+describe("roundUpCents", () => {
+  it("rounds up to 2 decimals so a suggested borrow never lands under the shortfall", () => {
+    const shortfall = 1_800n * 10n ** 18n + 1n; // 1800.000000000000000001
+    expect(roundUpCents(shortfall)).toBe(1_800_010_000_000_000_000_000n);
+    expect(roundUpCents(shortfall) >= shortfall).toBe(true);
+  });
+
+  it("keeps an exact 2-decimal value", () => {
+    expect(roundUpCents(12_340_000_000_000_000_000n)).toBe(12_340_000_000_000_000_000n);
   });
 });

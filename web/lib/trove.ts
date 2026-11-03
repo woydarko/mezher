@@ -42,3 +42,9 @@ export function openTroveQuote(i: OpenTroveInput): OpenTroveQuote {
   }
   return { state: "ok", totalDebtWei, icrE18: icr };
 }
+
+/** Rounds up to 2 decimals (the precision the borrow field shows), so a suggestion is never below its minimum. */
+export function roundUpCents(wei: bigint): bigint {
+  const cent = 10n ** 16n;
+  return ((wei + cent - 1n) / cent) * cent;
+}

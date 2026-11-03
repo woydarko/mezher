@@ -27,9 +27,14 @@ export function useMerchantActivation(merchant: Address | undefined, amountWei: 
     ],
   });
   const [allowanceWei, feeWei, treasury] = reads.data ?? [];
-  const activated =
-    reads.data && merchant
-      ? isAddressEqual(merchant, treasury!) || merchantActivated(allowanceWei!, feeWei!)
-      : undefined;
-  return { activated, allowanceWei, isError: reads.isError, refetch: reads.refetch };
+  const isTreasury = reads.data && merchant ? isAddressEqual(merchant, treasury!) : false;
+  const activated = reads.data && merchant ? isTreasury || merchantActivated(allowanceWei!, feeWei!) : undefined;
+  // `feeWei` is what the merchant pays on this order (0 for the treasury).
+  return {
+    activated,
+    allowanceWei,
+    feeWei: isTreasury ? 0n : feeWei,
+    isError: reads.isError,
+    refetch: reads.refetch,
+  };
 }

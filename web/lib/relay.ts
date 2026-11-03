@@ -8,8 +8,8 @@ const DEDUPE_WINDOW_MS = 10 * 60_000;
 export const MAX_DEADLINE_AHEAD_S = 3600n;
 // 0.000001 BTC: Mezo testnet gas was 146 wei on 2026-10-19, so this covers ~10k pay() calls (~700k gas each).
 export const MIN_RELAYER_BALANCE_WEI = 10n ** 12n;
-// 10 MUSD: break-even from measured v1 gas, recomputed in Task 8. Below it the payer uses their own gas.
-export const MIN_SPONSORED_WEI = 10n * 10n ** 18n;
+import { MIN_SPONSORED_WEI } from "./mezo";
+export { MIN_SPONSORED_WEI };
 
 export const address = z
   .string()

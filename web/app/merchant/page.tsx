@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { isAddress, isAddressEqual, parseUnits, type Address, type Hex } from "viem";
-import { useAccount, usePublicClient, useSignTypedData } from "wagmi";
+import { useAccount, usePublicClient, useSignTypedData, useSwitchChain } from "wagmi";
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
@@ -29,7 +29,8 @@ const SIG_TTL_S = 15n * 60n;
 type Errors = Partial<Record<"to" | "amount" | "order" | "label", string>>;
 
 export default function MerchantPage() {
-  const { address } = useAccount();
+  const { address, chainId, isConnected } = useAccount();
+  const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
   const { signTypedDataAsync } = useSignTypedData();
   const [to, setTo] = useState("");
@@ -82,12 +83,13 @@ export default function MerchantPage() {
         body: toJson({ permit }),
       }).catch(() => null);
       const data: { hash?: Hex; error?: string; reason?: string } = res ? await res.json().catch(() => ({})) : {};
-      if (!res || res.status >= 500) throw new Error("Our gas relay is down. Try again in a minute.");
-      if (!res.ok || !data.hash) throw new Error(errorCopy(data.reason ?? data.error ?? "relay_" + res.status));
-      await publicClient
+      if (!res || res.status >= 500) throw new Error("activate_relay_down");
+      if (!res.ok || !data.hash) throw new Error(data.reason ?? data.error ?? "relay_" + res.status);
+      const receipt = await publicClient
         .waitForTransactionReceipt({ hash: data.hash, timeout: 60_000 })
         // same stall guard as the checkout: one direct read after the timeout
         .catch(() => publicClient.getTransactionReceipt({ hash: data.hash! }));
+      if (receipt.status !== "success") throw new Error("reverted");
       await activation.refetch();
       setActivating(null);
     } catch (err) {
@@ -141,7 +143,10 @@ export default function MerchantPage() {
         </p>
         {!ADDRESSES.mezherPay && <StatusLine tone="error">Payments are not live yet: MezherPay is not deployed.</StatusLine>}
         {activation.activated === true && <StatusLine tone="success">Payments are active for this address.</StatusLine>}
-        {ADDRESSES.mezherPay && activation.activated !== true && (
+        {ADDRESSES.mezherPay && activation.activated !== true && isConnected && chainId !== MEZO_TESTNET.id && (
+          <PrimaryButton onClick={() => switchChain({ chainId: MEZO_TESTNET.id })}>Switch to Mezo testnet</PrimaryButton>
+        )}
+        {ADDRESSES.mezherPay && activation.activated !== true && !(isConnected && chainId !== MEZO_TESTNET.id) && (
           <PrimaryButton
             loading={activating?.tone === "info"}
             loadingLabel={activating?.text}

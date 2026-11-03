@@ -77,3 +77,14 @@ export async function isSmartAccount(client: { getCode(a: { address: Address }):
   const code = (await client.getCode({ address })) ?? "0x";
   return code !== "0x" && !code.toLowerCase().startsWith(DELEGATION_PREFIX);
 }
+
+/**
+ * Whether the payer must sign an MUSD permit for `fromBalanceWei`. ERC-2612 permit overwrites the allowance, so a
+ * merchant paying from balance would replace its fee budget with the payment amount and spend it to 0. When the
+ * existing allowance already covers it, the order goes with an empty permit (the contract's try/catch ignores it)
+ * and transferFrom spends the allowance down instead. `remainingWei` is the allowance left after this payment.
+ */
+export function permitPlan(allowanceWei: bigint, fromBalanceWei: bigint): { needed: boolean; remainingWei: bigint } {
+  if (allowanceWei < fromBalanceWei) return { needed: true, remainingWei: 0n };
+  return { needed: false, remainingWei: allowanceWei - fromBalanceWei };
+}

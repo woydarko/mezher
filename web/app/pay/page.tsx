@@ -25,7 +25,7 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
 import ui from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
-import { checkoutReducer, isSmartAccount, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
+import { checkoutReducer, isSmartAccount, permitPlan, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
 import { formatMusd, formatRatio, toJson } from "@/lib/format";
 import { getBorrowHints } from "@/lib/hints";
 import { linkQuery, parseLink, type PayLink } from "@/lib/link";
@@ -37,7 +37,9 @@ import {
   borrowerOpsSignaturesAbi,
   explorerAddress,
   explorerTx,
+  MIN_SPONSORED_WEI,
   mezherPayAbi,
+  mezherPayCallAbi,
   musdAbi,
   priceFeedAbi,
   troveManagerAbi,
@@ -221,6 +223,8 @@ function CheckoutFor({ link }: { link: PayLink }) {
   const [paidSplit, setPaidSplit] = useState<{ fromBalanceWei: bigint; borrowWei: bigint } | null>(null);
 
   const activation = useMerchantActivation(link.to, link.amountWei);
+  // The payer's own allowance: a merchant paying from balance must not have its fee budget overwritten.
+  const payerBudget = useMerchantActivation(address, link.amountWei);
   const smartAccount = useQuery({
     queryKey: ["smart-account", address],
     enabled: Boolean(address && publicClient),
@@ -282,6 +286,18 @@ function CheckoutFor({ link }: { link: PayLink }) {
     return { orderSig, permit };
   }
 
+  /** False when the payer's existing MUSD allowance already covers the balance part (permit would overwrite it). */
+  async function permitNeeded(owner: Address, fromBalance: bigint): Promise<boolean> {
+    if (fromBalance === 0n) return false;
+    const allowance = await publicClient!.readContract({
+      address: ADDRESSES.musd,
+      abi: musdAbi,
+      functionName: "allowance",
+      args: [owner, mezherPay!],
+    });
+    return permitPlan(allowance, fromBalance).needed;
+  }
+
   const newOrder = (payerAddr: Address, fromBalance: bigint, deadline: bigint): Order => ({
     payer: payerAddr,
     merchant: link.to,
@@ -296,12 +312,13 @@ function CheckoutFor({ link }: { link: PayLink }) {
     if (!address || !publicClient || !mezherPay || !trove || q?.state !== "ok") return;
     setFallback(null);
     setPaidSplit({ fromBalanceWei: q.fromBalanceWei, borrowWei: q.borrowWei });
-    setPlan({ permit: q.fromBalanceWei > 0n, third: q.borrowWei > 0n });
     dispatch({ type: "START" });
     try {
+      const withPermit = await permitNeeded(address, q.fromBalanceWei);
+      setPlan({ permit: withPermit, third: q.borrowWei > 0n });
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
       const order = newOrder(address, q.fromBalanceWei, deadline);
-      const { orderSig, permit } = await signOrderAndPermit(order, deadline, q.fromBalanceWei > 0n);
+      const { orderSig, permit } = await signOrderAndPermit(order, deadline, withPermit);
 
       let borrow = NO_BORROW;
       if (q.borrowWei > 0n) {
@@ -323,17 +340,20 @@ function CheckoutFor({ link }: { link: PayLink }) {
       dispatch({ type: "BORROW_SIGNED", borrow });
 
       const signed: Signed = { order, orderSig, permit, borrow };
+      if (link.amountWei < MIN_SPONSORED_WEI) {
+        // Too small to sponsor: skip the relay and send the same signatures from the payer's wallet.
+        await confirm(await submitOwnGas(signed));
+        return;
+      }
       const res = await fetch("/api/relay", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: toJson(signed),
       }).catch(() => null);
       const data: { hash?: Hex; error?: string; reason?: string } = res ? await res.json().catch(() => ({})) : {};
-      const tooSmall = data.error === "own_gas_required";
-      if (!res || res.status >= 500 || tooSmall) {
-        // Relay down, or too small to sponsor: the payer can send the same signatures with their own gas.
+      if (!res || res.status >= 500) {
         setFallback(signed);
-        dispatch({ type: "FAILED", code: tooSmall ? "own_gas_required" : "relayer_unavailable" });
+        dispatch({ type: "FAILED", code: "relayer_unavailable" });
         return;
       }
       if (!res.ok || !data.hash) {
@@ -351,12 +371,13 @@ function CheckoutFor({ link }: { link: PayLink }) {
     if (!address || !publicClient || !mezherPay) return;
     setFallback(null);
     setPaidSplit({ fromBalanceWei: link.amountWei, borrowWei: 0n });
-    setPlan({ permit: true, third: true });
     dispatch({ type: "START" });
     try {
+      const withPermit = await permitNeeded(address, link.amountWei);
+      setPlan({ permit: withPermit, third: true });
       const deadline = BigInt(Math.floor(Date.now() / 1000)) + SIG_TTL_S;
       const order = newOrder(address, link.amountWei, deadline);
-      const { orderSig, permit } = await signOrderAndPermit(order, deadline, true);
+      const { orderSig, permit } = await signOrderAndPermit(order, deadline, withPermit);
 
       const hints = await getBorrowHints(publicClient, { collWei: a.collWei, debtAfterWei: a.totalDebtWei });
       const nonce = await publicClient.readContract({
@@ -381,7 +402,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
       const hash = await writeContractAsync({
         chainId: MEZO_TESTNET.id,
         address: mezherPay,
-        abi: mezherPayAbi,
+        abi: mezherPayCallAbi,
         functionName: "openAndPay",
         args: [order, orderSig, permit, open],
         value: a.collWei,
@@ -396,7 +417,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
     return writeContractAsync({
       chainId: MEZO_TESTNET.id,
       address: mezherPay!,
-      abi: mezherPayAbi,
+      abi: mezherPayCallAbi,
       functionName: "pay",
       args: [s.order, s.orderSig, s.permit, s.borrow],
     });
@@ -579,8 +600,24 @@ function CheckoutFor({ link }: { link: PayLink }) {
                 value={formatMusd(q.borrowWei) + " MUSD"}
                 sub={q.borrowWei > 0n ? "fee 0.1% · " + formatMusd(q.feeWei, 4) + " MUSD" : undefined}
               />
-              <ReceiptLine label="Merchant receives" value={formatMusd(link.amountWei) + " MUSD"} />
-              <ReceiptLine label="Gas you pay" value={q.borrowWei > 0n ? "0" : "Network fee, under 0.000001 BTC"} />
+              <ReceiptLine
+                label="Merchant receives"
+                value={formatMusd(link.amountWei - (activation.feeWei ?? 0n)) + " MUSD"}
+                sub="after the shop's fee"
+              />
+              <ReceiptLine
+                label="Gas you pay"
+                value={link.amountWei >= MIN_SPONSORED_WEI ? "0" : "Network fee, under 0.000001 BTC"}
+              />
+              {payerBudget.allowanceWei !== undefined &&
+                payerBudget.allowanceWei > 0n &&
+                q.fromBalanceWei > 0n &&
+                permitPlan(payerBudget.allowanceWei, q.fromBalanceWei).remainingWei < (payerBudget.feeWei ?? 0n) && (
+                  <StatusLine tone="error">
+                    You are also a shop on Mezher. Paying from your balance uses up your fee budget, so your own
+                    customers can&apos;t pay you until you activate payments again on the Merchant page.
+                  </StatusLine>
+                )}
               <div className={ui.field}>
                 <label htmlFor="min-icr" className={ui.fieldLabel}>
                   Keep my ratio above
