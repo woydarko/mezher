@@ -15,3 +15,6 @@ export function formatRatio(e18: bigint): string {
 
 /** JSON.stringify that writes bigints as decimal strings, the shape the relay routes expect. */
 export const toJson = (v: unknown) => JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x));
+
+/** Basis points as a percentage, e.g. 50 -> "0.5%". */
+export const formatBps = (bps: number | bigint) => `${Number(bps) / 100}%`;

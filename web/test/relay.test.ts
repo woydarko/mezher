@@ -14,7 +14,7 @@ function body(over: { payer?: string; orderId?: string; deadline?: number; amoun
     order: {
       payer: over.payer ?? PAYER,
       merchant: MERCHANT,
-      amount: over.amount ?? "12000000000000000000",
+      amount: over.amount ?? String(MIN_SPONSORED_WEI),
       fromBalance: over.fromBalance ?? "5000000000000000000",
       minIcrAfter: "1505000000000000000",
       orderId: over.orderId ?? "0x" + "0".repeat(48) + "3f9a1c0d2b4e5f60",

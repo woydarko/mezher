@@ -33,8 +33,12 @@ export const ADDRESSES = {
 /** Fee allowance a merchant grants MezherPay in one activation permit: 10,000 MUSD. */
 export const ACTIVATION_BUDGET_WEI = 10_000n * 10n ** 18n;
 
-/** 10 MUSD: break-even from measured v1 gas, recomputed in Task 8. Below it the payer uses their own gas. */
-export const MIN_SPONSORED_WEI = 10n * 10n ** 18n;
+/**
+ * 16 MUSD: smallest whole amount whose 0.5% fee covers the relayer's gas for `pay`. Inputs: 679,312 gas
+ * (fork, address(0) hints, conservative), 1,462,500 wei gas price and $76,508 BTC (Mezo mainnet, 2026-11-03)
+ * = $0.0760 per pay, so $15.20 at 50 bps, rounded up. Below it the payer uses their own gas. See docs/BUSINESS.md.
+ */
+export const MIN_SPONSORED_WEI = 16n * 10n ** 18n;
 
 /** First block to scan for Paid events (the MezherPay deploy block). */
 export const MEZHER_PAY_DEPLOY_BLOCK = BigInt(process.env.NEXT_PUBLIC_MEZHER_PAY_DEPLOY_BLOCK || "0");

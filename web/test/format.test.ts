@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatMusd, formatRatio } from "@/lib/format";
+import { formatBps, formatMusd, formatRatio } from "@/lib/format";
 
 describe("formatMusd", () => {
   it("shows 2 decimals with thousands separators, truncating", () => {
@@ -21,5 +21,12 @@ describe("formatRatio", () => {
   it("shows a 1e18-scaled ratio as a percent with one decimal, rounded down", () => {
     expect(formatRatio(1_505_000_000_000_000_000n)).toBe("150.5%");
     expect(formatRatio(1_619_999_000_000_000_000n)).toBe("161.9%");
+  });
+});
+
+describe("formatBps", () => {
+  it("writes basis points as a percentage", () => {
+    expect(formatBps(50n)).toBe("0.5%");
+    expect(formatBps(100)).toBe("1%");
   });
 });

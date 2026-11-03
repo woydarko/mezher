@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { isAddress, isAddressEqual, parseUnits, type Address, type Hex } from "viem";
-import { useAccount, usePublicClient, useSignTypedData, useSwitchChain } from "wagmi";
+import { useAccount, usePublicClient, useReadContract, useSignTypedData, useSwitchChain } from "wagmi";
 import { Card } from "@/components/Card";
 import { Doodle } from "@/components/Doodle";
 import { Field } from "@/components/Field";
@@ -15,9 +15,9 @@ import { StatusLine } from "@/components/StatusLine";
 import styles from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
 import { errorCopy } from "@/lib/errors";
-import { toJson } from "@/lib/format";
+import { formatBps, formatMusd, toJson } from "@/lib/format";
 import { buildLink, embedSnippet, randomOrder } from "@/lib/link";
-import { ACTIVATION_BUDGET_WEI, ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET, musdAbi } from "@/lib/mezo";
+import { ACTIVATION_BUDGET_WEI, ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET, mezherPayAbi, musdAbi } from "@/lib/mezo";
 import { fetchPaidLogs } from "@/lib/paid-logs";
 import { permitTypedData, splitSig } from "@/lib/signatures";
 
@@ -51,6 +51,13 @@ export default function MerchantPage() {
   const merchant = isAddress(to) ? (to as Address) : undefined;
   const amountWei = /^\d+(\.\d{1,18})?$/.test(amount) ? parseUnits(amount, 18) : 0n;
   const activation = useMerchantActivation(merchant, amountWei);
+  const feeBps = useReadContract({
+    chainId: MEZO_TESTNET.id,
+    address: ADDRESSES.mezherPay,
+    abi: mezherPayAbi,
+    functionName: "feeBps",
+    query: { enabled: Boolean(ADDRESSES.mezherPay) },
+  });
   const [activating, setActivating] = useState<{ tone: "info" | "error"; text: string } | null>(null);
   const payments = useQuery({
     queryKey: ["paid", merchant],
@@ -177,6 +184,13 @@ export default function MerchantPage() {
           placeholder="12.00"
           error={errors.amount}
         />
+        {amountWei > 0n && activation.feeWei !== undefined ? (
+          <p>
+            Fee {formatMusd(activation.feeWei)} MUSD, you receive {formatMusd(amountWei - activation.feeWei)} MUSD.
+          </p>
+        ) : (
+          feeBps.data !== undefined && <p>{formatBps(feeBps.data)} fee per payment, taken from you, not the customer.</p>
+        )}
         <Field
           label="Label"
           value={label}
