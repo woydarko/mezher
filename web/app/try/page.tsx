@@ -90,7 +90,7 @@ export default function TryPage() {
 
   return (
     <main className="page page-wide">
-      <h1>Try Mezher in two minutes</h1>
+      <h1>Try Mezher with test BTC</h1>
       <p>
         This is Mezo testnet: test BTC and test MUSD with no real value. You pay a demo merchant, and whatever your MUSD
         balance does not cover is borrowed against your BTC, straight to the merchant. You can read everything here
