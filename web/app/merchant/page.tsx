@@ -14,6 +14,7 @@ import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
 import styles from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
+import { BITCOIN_WALLET_MESSAGE, isBitcoinConnector } from "@/lib/checkout";
 import { errorCopy } from "@/lib/errors";
 import { formatBps, formatMusd, toJson } from "@/lib/format";
 import { buildLink, embedSnippet, randomOrder } from "@/lib/link";
@@ -29,7 +30,8 @@ const SIG_TTL_S = 15n * 60n;
 type Errors = Partial<Record<"to" | "amount" | "order" | "label", string>>;
 
 export default function MerchantPage() {
-  const { address, chainId, isConnected } = useAccount();
+  const { address, chainId, isConnected, connector } = useAccount();
+  const bitcoin = isBitcoinConnector(connector?.type);
   const { switchChain } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
   const { signTypedDataAsync } = useSignTypedData();
@@ -146,8 +148,11 @@ export default function MerchantPage() {
         <h1>Get paid in MUSD</h1>
         <p>
           Mezher takes a small fee from each payment you receive, paid in MUSD from your wallet after the customer
-          pays. Allow it once with a signed message. It costs you no gas.
+          pays. Allow it once with a signed message. It costs you no gas. The allowance is up to 10,000 MUSD in fees
+          and can only be used for the fee on payments you actually receive. To revoke it, set the MUSD allowance for
+          MezherPay to 0 from your wallet.
         </p>
+        {bitcoin && <StatusLine tone="error">{BITCOIN_WALLET_MESSAGE}</StatusLine>}
         {!ADDRESSES.mezherPay && <StatusLine tone="error">Payments are not live yet: MezherPay is not deployed.</StatusLine>}
         {activation.activated === true && <StatusLine tone="success">Payments are active for this address.</StatusLine>}
         {ADDRESSES.mezherPay && activation.activated !== true && isConnected && chainId !== MEZO_TESTNET.id && (
@@ -157,8 +162,8 @@ export default function MerchantPage() {
           <PrimaryButton
             loading={activating?.tone === "info"}
             loadingLabel={activating?.text}
-            disabled={!address || !merchant || !isAddressEqual(address, merchant)}
-            disabledReason="Connect the wallet you want to get paid at, and enter it as the Pay to address."
+            disabled={bitcoin || !address || !merchant || !isAddressEqual(address, merchant)}
+            disabledReason={bitcoin ? BITCOIN_WALLET_MESSAGE : "Connect the wallet you want to get paid at, and enter it as the Pay to address."}
             onClick={activate}
           >
             Activate payments

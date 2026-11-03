@@ -25,7 +25,7 @@ import { RedemptionLine } from "@/components/RedemptionLine";
 import { StatusLine } from "@/components/StatusLine";
 import ui from "@/components/ui.module.css";
 import { useMerchantActivation } from "@/components/useMerchantActivation";
-import { checkoutReducer, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
+import { BITCOIN_WALLET_MESSAGE, checkoutReducer, isBitcoinConnector, isSmartAccount, permitPlan, receiptEvent, type BorrowSig, type OpenSig, type Order, type PermitSig } from "@/lib/checkout";
 import { formatMusd, formatRatio, toJson } from "@/lib/format";
 import { getBorrowHints } from "@/lib/hints";
 import { linkQuery, parseLink, type PayLink } from "@/lib/link";
@@ -155,7 +155,7 @@ function OrderCard({ link }: { link: PayLink }) {
 }
 
 function CheckoutFor({ link }: { link: PayLink }) {
-  const { address, chainId, isConnected } = useAccount();
+  const { address, chainId, isConnected, connector } = useAccount();
   const [state, dispatch] = useReducer(checkoutReducer, { step: "idle" });
   const [fallback, setFallback] = useState<Signed | null>(null);
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
@@ -473,7 +473,8 @@ function CheckoutFor({ link }: { link: PayLink }) {
 
   // Nothing is signed until the wallet is a regular account and the shop can pay its fee.
   let gate: ReactNode = null;
-  if (smartAccount.data === true)
+  if (isBitcoinConnector(connector?.type)) gate = <StatusLine tone="error">{BITCOIN_WALLET_MESSAGE}</StatusLine>;
+  else if (smartAccount.data === true)
     gate = (
       <StatusLine tone="error">
         This wallet is a smart account, and it can&apos;t sign Mezher payments. Switch to a regular EVM wallet account

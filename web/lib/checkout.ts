@@ -87,6 +87,7 @@ export async function isSmartAccount(client: { getCode(a: { address: Address }):
  * OrangeKit (Passport's Bitcoin wallets: Unisat, OKX, Xverse) throws "Unsupported method" on signTypedData, so it
  * cannot sign the order or the permit, deployed account or not. Connector type "orangekit" in @mezo-org/passport.
  */
+export const BITCOIN_WALLET_MESSAGE = "Bitcoin wallets can't sign this yet. Use an EVM wallet such as MetaMask.";
 export const isBitcoinConnector = (connectorType: string | undefined) => connectorType === "orangekit";
 
 /**

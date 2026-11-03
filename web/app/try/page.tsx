@@ -9,7 +9,7 @@ import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
 import { StatusLine } from "@/components/StatusLine";
 import { WalletButton } from "@/components/WalletButton";
-import { isSmartAccount } from "@/lib/checkout";
+import { BITCOIN_WALLET_MESSAGE, isBitcoinConnector, isSmartAccount } from "@/lib/checkout";
 import { buildLink, randomOrder } from "@/lib/link";
 import { ADDRESSES, explorerTx, MEZO_TESTNET, musdAbi, troveManagerAbi } from "@/lib/mezo";
 import { sponsored, tryScenario } from "@/lib/try";
@@ -110,7 +110,7 @@ function Scenario({ address }: { address: `0x${string}` }) {
 }
 
 export default function TryPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const publicClient = usePublicClient({ chainId: MEZO_TESTNET.id });
   const smartAccount = useQuery({
     queryKey: ["smart-account", address],
@@ -127,7 +127,11 @@ export default function TryPage() {
         without a wallet; connect one to get steps made for it.
       </p>
 
-      {isConnected && smartAccount.data === true ? (
+      {isConnected && isBitcoinConnector(connector?.type) ? (
+        <Card title="Switch to an EVM wallet">
+          <p>{BITCOIN_WALLET_MESSAGE}</p>
+        </Card>
+      ) : isConnected && smartAccount.data === true ? (
         <Card title="Switch to a regular wallet">
           <p>
             This wallet is a smart account, and it can&apos;t sign Mezher payments. Switch to a regular EVM wallet
