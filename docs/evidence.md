@@ -47,7 +47,7 @@ The merchant in the other three is the same demo wallet. Gas figures and the bre
 | Contract invariants | 11, Foundry default 256 runs × 500 calls each | `cd contracts && forge test --match-path test/MezherPay.invariant.t.sol` |
 | Contract fork (real Mezo testnet contracts) | 6 | `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol` |
 | Contract fork (Mezo mainnet) | 1 | `cd contracts && MEZO_MAINNET_RPC_URL=https://mainnet.mezo.public.validationcloud.io forge test --match-path test/MezherPay.mainnetFork.t.sol` |
-| Web unit | 194 | `cd web && pnpm vitest run` |
+| Web unit | 179 | `cd web && pnpm vitest run` |
 
 71 contract tests, counted with `cd contracts && forge test --list --json`; all four suites passed when run on 2026-11-03. The first run recompiles and can take minutes; the invariant run took about 9.5 minutes.
 

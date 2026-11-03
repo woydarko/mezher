@@ -191,7 +191,7 @@ Counts from `forge test --list` and `vitest run`, 3 Nov 2026.
 | Contract invariants (11) | `cd contracts && forge test --match-path test/MezherPay.invariant.t.sol` | Foundry default of 256 runs of 500 calls each: honest splits, ratio moves around 150%, redirect attempts; no funds held, exact amounts, fees, no borrow under the floor |
 | Contract fork, testnet (6) | `cd contracts && MEZO_TESTNET_RPC_URL=https://rpc.test.mezo.org forge test --match-path test/MezherPay.fork.t.sol` | The real Mezo contracts on a testnet fork: 5 + 7 split, `openAndPay`, replay, ICR floor, redirect |
 | Contract fork, mainnet (1) | `cd contracts && MEZO_MAINNET_RPC_URL=<mainnet rpc> forge test --match-path test/MezherPay.mainnetFork.t.sol` | Open, pay and borrow-to-pay on a Mezo mainnet fork (skipped without the variable) |
-| Web unit (194) | `cd web && pnpm vitest run` | Link parsing, quote, ratio, Recovery Mode and capacity, Trove opening, signatures, hints, relay, checkout state, payment logs, `/proof` and `/try` helpers, QR, embed button |
+| Web unit (179) | `cd web && pnpm vitest run` | Link parsing, quote, ratio, Recovery Mode and capacity, Trove opening, signatures, hints, relay, checkout state, payment logs, `/proof` and `/try` helpers, QR, embed button |
 | Build | `cd web && pnpm build` | Type check and production build |
 
 Mezo's price oracle is a native precompile that Foundry's EVM does not have, so the fork tests pin `PriceFeed.fetchPrice()` to the live price. Every other contract in those tests is the real one.
