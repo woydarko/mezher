@@ -1,34 +1,68 @@
 # Security
 
-MezherPay is testnet software. It has had an AI-assisted review, an invariant suite and a Slither run; it has **not** had a professional audit. Do not use it with real funds.
+**Testnet only. This is an AI-assisted manual review plus a Slither run, not a professional audit.** Do not use MezherPay with real funds.
+
+The review covers `MezherPay` v2 and the relay, activation and faucet routes. It read Mezo's `MUSD`, `BorrowerOperations` and `BorrowerOperationsSignatures` from the [`mezo-org/musd`](https://github.com/mezo-org/musd/tree/main/solidity/contracts) `main` branch; the fork tests check the behaviour on the deployed contracts.
 
 ## Properties
 
-Enforced by [`MezherPay.sol`](../contracts/src/MezherPay.sol) and checked by the [invariant suite](../contracts/test/MezherPay.invariant.t.sol):
+Enforced by [`MezherPay.sol`](../contracts/src/MezherPay.sol) and checked by the [unit](../contracts/test/MezherPay.t.sol) and [invariant](../contracts/test/MezherPay.invariant.t.sol) tests:
 
 | Property | How |
 | --- | --- |
+| Money moves only as the payer signed | Every move needs an EIP-712 `Order` binding payer, merchant, amount, split, ratio floor, order id and deadline (`BadOrderSignature`) |
+| An order settles once | `settled[keccak256(payer, merchant, orderId)]` is set before any external call (`OrderAlreadySettled`) |
+| An order does not work on another chain or deployment | The domain binds chain id and contract address. Mezo's and MUSD's domains bind their chain and their nonces stop replay; a Mezo signature names no MezherPay deployment |
 | Borrowed MUSD only reaches the merchant the payer signed for | Mezo's `WithdrawMUSD` signature binds amount, borrower, recipient, nonce and deadline |
-| A balance-only payment cannot be redirected | `pay()` requires `msg.sender == payer` when nothing is borrowed (`BalanceOnlyNeedsPayer`) |
-| A payment never leaves the Trove under 150% | ICR read from TroveManager at the PriceFeed price after the borrow; below the floor the whole call reverts (`IcrBelowFloor`) |
-| All or nothing | One call; any failure reverts both parts |
-| No custody | No owner, no upgrades, no balance between calls |
+| A payment through MezherPay never leaves the Trove under the order's floor | `minIcrAfter` is at least 150% (`MinIcrBelowFloor`); ICR is read after the move and a lower value reverts everything (`IcrBelowFloor`). A borrow signature used on its own skips this, see Known limits |
+| The merchant fee is at most 1% of what the same call delivered | The fee is `amount * feeBps / 10000`, `feeBps <= 100`, pulled after delivery |
+| All or nothing | One call; any failure reverts every part and returns the BTC |
+| No custody | No owner, no upgrades, no `receive`. Borrowed MUSD goes straight to the merchant, BTC straight into the Trove, balance MUSD from payer to merchant |
 | A front-run permit does not block the payment | `permit` is wrapped in `try/catch`; the transfer then uses the allowance already set |
+
+## Findings
+
+| # | Finding | Severity | Status |
+| --- | --- | --- | --- |
+| 1 | After a used borrow signature, the checkout said "Press Pay again". The shop already had the borrowed part, so a retry paid it twice | Medium | Fixed in `5c1b4a8`; the copy now says to check first. Test: `maps BorrowerOperationsSignatures: Invalid signature`. The chain side stays a known limit |
+| 2 | Relay, activation and faucet routes read the whole body into memory before checking its size | Low | Fixed in `220c986`. Test: `stops reading a body without content-length once it is over the limit` |
+| 3 | Rate limits took the first `x-forwarded-for` hop, which the client controls behind an appending proxy | Low | Fixed in `220c986` (last hop). Test: `does not let a client pick its rate-limit IP with an extra x-forwarded-for hop` |
+| 4 | Six bad requests naming a victim locked that payer or merchant out of the relay for a minute, since the limit counted before any signature check | Low | Fixed in `220c986` (counted after simulation). Tests: `does not let requests with bad signatures lock a payer out`, `... lock a merchant out` |
+| 5 | Two parallel copies of one order both passed the dedupe check, so the relayer sent a transaction bound to revert | Low | Fixed in `220c986` (reserved before any await). Test: `sends once when the same order arrives twice at the same time` |
+| 6 | Parallel faucet requests from one IP each passed the one-claim-per-day check | Low | Fixed in `220c986`. Test: `keeps the one claim per IP when requests arrive at the same time` |
+| 7 | A borrow signature works alone, without fee, `Paid` or the floor | Medium, by design | Accepted, see Known limits. Test: `test_borrowSigAlone_deliversWithoutFeeOrSettlement` |
+| 8 | A merchant can avoid the fee on the borrowed part by submitting the borrow signature itself | Low | Accepted: routing the borrow through the contract lets anyone strand the MUSD there, which is worse. The merchant still receives only what the payer signed |
+| 9 | A payment that reverts leaves its signatures public and unspent until their deadline, and an order cannot be cancelled | Low | Accepted: they can only execute as signed. The checkout signs for 15 minutes and the relay refuses more than 1 hour. A payer can end them early only by spending the nonces: any Mezo signed action for a borrow signature; submitting the permit, then `approve(MezherPay, 0)`, for the balance part |
+| 10 | Anyone can send a payment to any merchant: `Paid` is not merchant-approved, and the order id is unique only per (payer, merchant) | Low | Accepted: the merchant only gains. An integrator must compare `amount` and not trust an order id alone. `/proof` and dashboard totals count such payments, including self-payments that cost only the fee and gas |
+| 11 | Burning a merchant's fee allowance to block its payments costs the attacker 200 times the allowance at 50 bps, all delivered to that merchant | Info | Accepted |
+| 12 | A permit overwrites allowance, so a merchant paying more than its fee budget from balance loses that budget, as does a stale unspent permit submitted later | Low | Accepted: only a re-activation is lost. The checkout skips the permit when the allowance already covers the payment (`permitPlan`) |
+| 13 | Trove hints are not signed, so a submitter or relay caller can raise the gas of a payment but not change its outcome | Low | Accepted: the fee from 16 MUSD up pays for typical gas. Test: `test_pay_hintsAreNotSigned_outcomeUnchanged` |
+| 14 | A payer can make a simulated relay transaction revert by moving first, costing the relayer gas | Low | Accepted: the attacker pays gas too, and the limits apply per payer and IP |
+| 15 | A treasury set to the MUSD address would revert every fee, as MUSD refuses transfers to itself | Info | Accepted: deploy-time mistake, seen on the first payment, fixed by redeploying |
+
+Checked with no finding:
+
+- **Merchant allowance:** an order naming a merchant as payer needs that merchant's signature (`test_feeAllowance_notSpendableAsPayerWithoutMerchantSignature`); an unasked payment leaves it better off and spends only the fee (`test_feeAllowance_unaskedOrderNeverCostsMerchant_fuzz`).
+- **`openAndPay` BTC:** wrong value, expired signature, tampered debt, active Trove and an order already settled through `pay` all revert and return the BTC (`test_openAndPay_*_returnsBtc`, `test_openAndPay_revertsWhenValueDiffersFromSigned`, invariant `invariant_openerKeepsTheRest`). Mezo puts all of `msg.value` into the Trove and sends nothing back. A third party opening the Trove from the signature pays the collateral itself, which stays the payer's (`test_openTroveSigAlone_observerGiftsTheCollateral`).
+- **Reentrancy:** MUSD is OpenZeppelin `ERC20Permit` with no hooks, and only refuses transfers to zero and to itself. Mezo's open and borrow paths make no call to MezherPay, the merchant or the payer. `settled` is written before any external call anyway.
+- **Logging:** routes log route, status, payer prefix, hash and a short error, never bodies or signatures. Validation errors return field paths and messages, not values.
+
+## Known limits
+
+- **A front-run borrow delivers money without a fee or `Paid` event.** Anyone who sees a `WithdrawMUSD` signature can submit it straight to Mezo. The money reaches only the signed merchant and only the signed amount, but MezherPay collects no fee, emits no `Paid` and does not check the payer's floor, so only Mezo's own rules apply (110%, and its Recovery Mode rules). The `pay` then reverts and its balance part does not move. The order stays open, so paying again would pay the borrowed part twice.
+- **EOA signers only.** All three signatures are ECDSA with no ERC-1271. An EIP-7702 delegated EOA works; the checkout sends smart accounts to an EVM wallet.
+- **Rate limits live in memory per server instance.** A cold start or a second instance resets them, entries are not evicted until the instance ends, and on a server with no proxy in front `x-forwarded-for` is still the client's to set. Vercel overwrites it. Anyone with many IPs can use up the faucet's hourly cap and block other claims until it resets.
+- **An order does not commit to an entry point.** An order signed for `openAndPay` can settle through `pay` if the payer already holds the MUSD and the permit is valid. The merchant is paid as signed and `openAndPay` reverts with the BTC returned (`test_openAndPay_afterSameOrderSettledByPay_returnsBtc`).
+- **Mezo is trusted.** MezherPay's Mezo addresses are immutable, but those contracts are upgradeable by Mezo governance, and a change there could break these conclusions.
 
 ## Slither
 
-`python -m slither src/MezherPay.sol --filter-paths "lib|test|script"` (Slither 0.11.6, run from `contracts/`): 102 detectors, 2 results.
+`slither . --filter-paths "lib|test|script"` (run from `contracts/`): 102 detectors, 6 results, none needing a code change.
 
-**1. `arbitrary-send-erc20-permit`: `transferFrom(p.payer, …)` after `permit`.**
-Mostly expected: the payer's permit is the authority, and a relayer submits it. The redirect cases are blocked (see Properties) and covered by unit and invariant tests. One narrow case remains, below.
-
-**2. `reentrancy-events`: `Paid` emitted after external calls.**
-The only external calls go to MUSD and Mezo's BorrowerOperationsSignatures, TroveManager and PriceFeed, which are fixed at deploy time. MezherPay keeps no state that a reentrant call could corrupt. Accepted.
-
-## Known issue: leftover allowance
-
-The MUSD permit names MezherPay as spender but not the merchant. Normally the permit and the transfer happen in the same call, so no allowance outlives a payment. It can outlive one if someone submits the payer's permit on its own (front-running) and the payment then fails for another reason. Later, whoever holds a new borrow signature from the same payer (the relayer, or the merchant it names) could submit it with a larger `fromBalance`, and the leftover allowance goes to that merchant on top of the payment.
-
-Impact: limited to the leftover amount, and it only reaches a merchant the payer signed a borrow for. It needs a front-run, a failed payment and a later borrow-to-pay from the same payer.
-
-Planned fix (Wave 2, together with the redeploy): a Mezher EIP-712 order signature that binds payer, merchant, amount, `fromBalance` and order id, checked before any transfer. Until then the payer can clear the allowance with `approve(MezherPay, 0)`.
+| Detector | Where | Disposition |
+| --- | --- | --- |
+| `arbitrary-send-erc20` | `_collectFee` pulls from `o.merchant` | Accepted: intended fee pull, see findings 10 and 11 and the allowance check above |
+| `arbitrary-send-erc20-permit` | `_takeBalance` pulls from `o.payer` | Accepted: `o.payer` signed the order, checked first |
+| `unused-return` | `tryRecover`'s third value | Accepted: the error code and signer are checked; the third value only adds detail about the error |
+| `reentrancy-events` (2) | `Paid`, `OpenedAtCheckout` after external calls | Accepted: fixed Mezo and MUSD targets, no callback, `settled` already written |
+| `timestamp` | `block.timestamp > o.deadline` | Accepted: deadlines are minutes long, so a validator's small drift does not matter |
