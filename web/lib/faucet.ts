@@ -90,7 +90,6 @@ export function createFaucetHandler(deps: FaucetDeps): (req: Request) => Promise
       const hash = await deps.send(to, claim);
       sent = true;
       claimed.add(to);
-      ipClaimedAt.set(ip, now);
       claimTimes.push(now);
       log(ROUTE, 200, to, hash);
       return json(200, { hash });

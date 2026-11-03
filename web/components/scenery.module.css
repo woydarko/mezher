@@ -36,7 +36,7 @@
   }
 }
 
-/* Small screens keep the still frame: the boil alone held the main thread 20-26% busy at 360 px, 4x CPU throttle. */
+/* Small screens keep the still frame. Idle main thread at 360 px, 4x CPU throttle: 20-26% busy with the boil, 7-11% without it (the demo mockup remains), under 1% with reduced motion. */
 @media (max-width: 640px) {
   .boilSketch,
   .boilWobble {
