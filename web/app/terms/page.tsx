@@ -25,8 +25,7 @@ export default function TermsPage() {
           </li>
           <li>
             A merchant pays Mezher a 0.5% fee on each payment received, out of the payment. To allow it, the merchant signs
-            a permit for up to 10,000 MUSD in fees. It can only be used for that fee on payments actually received, and
-            the merchant can revoke it any time by setting the MUSD allowance for MezherPay to 0.
+            a permit for up to 10,000 MUSD in fees. Mezher uses it only for that fee on payments actually received. The merchant&apos;s own signed payment from balance can spend it too; no third party can. The merchant can revoke it any time by setting the MUSD allowance for MezherPay to 0.
           </li>
           <li>
             If you have no Trove, checkout can open one for you from your BTC as part of the payment. It takes up to

@@ -9,7 +9,7 @@ const shantell = Shantell_Sans({ subsets: ["latin"], variable: "--font-shantell"
 export const metadata: Metadata = {
   title: "Mezher: pay with your Bitcoin, keep your Bitcoin",
   description:
-    "Pay a merchant in MUSD. What your balance doesn't cover is borrowed against your BTC on Mezo, straight to the merchant, and our relayer pays the gas on payments of 16 MUSD and up.",
+    "Pay a merchant in MUSD. What your balance doesn't cover is borrowed against your BTC on Mezo, straight to the merchant, and our relayer pays the gas on payments of 16 MUSD and up. Opening a Trove at checkout is paid by you.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

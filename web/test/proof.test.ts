@@ -60,32 +60,32 @@ describe("parseTeamWallets", () => {
 
 describe("tryScenarios", () => {
   const m = (n: number) => BigInt(n) * 10n ** 18n;
-  const kinds = (hasTrove: boolean, bal: bigint) => tryScenarios(hasTrove, bal).map((s) => s.kind);
+  const kinds = (status: number, bal: bigint) => tryScenarios(status, bal).map((s) => s.kind);
   it("no Trove and little MUSD opens one and pays 20", () => {
-    expect(tryScenarios(false, m(3))).toMatchObject([{ kind: "open", amount: "20" }]);
+    expect(tryScenarios(0, m(3))).toMatchObject([{ kind: "open", amount: "20" }]);
   });
   it("no Trove but 20 MUSD pays from balance instead of promising to open one", () => {
-    expect(tryScenarios(false, m(1788))).toMatchObject([{ kind: "balance", amount: "20" }]);
+    expect(tryScenarios(0, m(1788))).toMatchObject([{ kind: "balance", amount: "20" }]);
   });
   it("a Trove and 20 MUSD offers balance and a split that still borrows", () => {
-    expect(tryScenarios(true, m(20))).toMatchObject([
+    expect(tryScenarios(1, m(20))).toMatchObject([
       { kind: "balance", amount: "20" },
       { kind: "split", amount: "25" },
     ]);
-    expect(tryScenarios(true, m(1788) + 1n)).toMatchObject([{ kind: "balance" }, { kind: "split", amount: "1794" }]);
+    expect(tryScenarios(1, m(1788) + 1n)).toMatchObject([{ kind: "balance" }, { kind: "split", amount: "1794" }]);
   });
   it("some balance under 20 rounds up to a whole MUSD plus 5", () => {
-    expect(tryScenarios(true, m(3) + 1n)).toMatchObject([{ kind: "split", amount: "9" }]);
-    expect(tryScenarios(true, m(11))).toMatchObject([{ kind: "split", amount: "16" }]);
+    expect(tryScenarios(1, m(3) + 1n)).toMatchObject([{ kind: "split", amount: "9" }]);
+    expect(tryScenarios(1, m(11))).toMatchObject([{ kind: "split", amount: "16" }]);
   });
   it("empty balance borrows all 20", () => {
-    expect(tryScenarios(true, 0n)).toMatchObject([{ kind: "borrow", amount: "20" }]);
+    expect(tryScenarios(1, 0n)).toMatchObject([{ kind: "borrow", amount: "20" }]);
   });
   it("says a fully borrowed payment needs an empty balance only when there is a balance and a Trove", () => {
-    expect(tryNote(true, m(5))).toMatch(/empty balance/);
-    expect(tryNote(true, 0n)).toBeUndefined();
-    expect(tryNote(false, m(5))).toBeUndefined();
-    expect(kinds(true, m(5))).not.toContain("borrow");
+    expect(tryNote(1, m(5))).toMatch(/empty balance/);
+    expect(tryNote(1, 0n)).toBeUndefined();
+    expect(tryNote(0, m(5))).toBeUndefined();
+    expect(kinds(1, m(5))).not.toContain("borrow");
   });
   it("20 MUSD is sponsored, the old 12 was not", () => {
     expect(sponsored("20")).toBe(true);

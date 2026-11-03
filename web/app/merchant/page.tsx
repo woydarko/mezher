@@ -149,7 +149,7 @@ export default function MerchantPage() {
         <p>
           Mezher takes a small fee from each payment you receive, paid in MUSD from your wallet after the customer
           pays. Allow it once with a signed message. It costs you no gas. The allowance is up to 10,000 MUSD in fees
-          and can only be used for the fee on payments you actually receive. To revoke it, set the MUSD allowance for
+          and Mezher uses it only for the fee on payments you receive. It is also spent if you sign a payment from your own balance; no third party can spend it. To revoke it, set the MUSD allowance for
           MezherPay to 0 from your wallet.
         </p>
         {bitcoin && <StatusLine tone="error">{BITCOIN_WALLET_MESSAGE}</StatusLine>}

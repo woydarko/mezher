@@ -31,7 +31,7 @@ const FAQ = [
   },
   {
     q: "What does it cost?",
-    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top. If your balance covers the whole payment, nothing is borrowed. Gas is covered from 16 MUSD up; below that you pay the small network fee yourself.",
+    a: "Mezo's 0.1% borrowing fee on the part you borrow, plus your Trove's usual interest. Mezher adds nothing on top. If your balance covers the whole payment, nothing is borrowed. Gas is covered from 16 MUSD up; below that you pay the small network fee yourself. Opening a Trove at checkout is always paid by you.",
   },
   {
     q: "Do I need MUSD in my wallet?",
@@ -61,7 +61,7 @@ export default function Home() {
           </h1>
           <p className={l.lead}>
             Short on MUSD? Mezher borrows only the missing part against your BTC, straight to the merchant, in one
-            transaction. No selling. We cover the gas on payments of 16 MUSD and up.
+            transaction. No selling. We cover the gas on payments of 16 MUSD and up (opening a Trove at checkout is paid by you).
           </p>
           <div className={l.ctas}>
             <Link href={demoHref} className={styles.primary}>

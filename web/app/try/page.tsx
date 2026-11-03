@@ -13,7 +13,7 @@ import { BITCOIN_WALLET_MESSAGE, isBitcoinConnector, isSmartAccount } from "@/li
 import { buildLink, randomOrder } from "@/lib/link";
 import { formatMusd } from "@/lib/format";
 import { ADDRESSES, explorerTx, MEZO_TESTNET, MIN_SPONSORED_WEI, musdAbi, troveManagerAbi } from "@/lib/mezo";
-import { tryNote, tryScenarios } from "@/lib/try";
+import { isDemoMerchant, tryNote, tryScenarios } from "@/lib/try";
 
 const DEMO_MERCHANT = process.env.NEXT_PUBLIC_DEMO_MERCHANT;
 const MEZO_FAUCET = "https://faucet.test.mezo.org/";
@@ -82,9 +82,10 @@ function Scenario({ address }: { address: `0x${string}` }) {
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [address] },
     ],
   });
-  const hasTrove = reads.data ? Number(reads.data[0]) === 1 : false;
-  const scenarios = reads.data ? tryScenarios(hasTrove, reads.data[1]) : [];
-  const note = reads.data ? tryNote(hasTrove, reads.data[1]) : undefined;
+  const troveStatus = reads.data ? Number(reads.data[0]) : 0;
+  const isMerchant = isDemoMerchant(address, DEMO_MERCHANT);
+  const scenarios = reads.data && !isMerchant ? tryScenarios(troveStatus, reads.data[1]) : [];
+  const note = reads.data && !isMerchant ? tryNote(troveStatus, reads.data[1]) : undefined;
   const [linkError, setLinkError] = useState<string>();
 
   // the order id is made on click, so going back to this page never reuses a settled order
@@ -99,6 +100,11 @@ function Scenario({ address }: { address: `0x${string}` }) {
     <Card title="2. Make a payment">
       {reads.isLoading && <StatusLine tone="info">Reading your wallet from Mezo testnet…</StatusLine>}
       {reads.isError && <StatusLine tone="error">Can&apos;t reach Mezo testnet. Retrying every 15 seconds.</StatusLine>}
+      {isMerchant && (
+        <StatusLine tone="info">
+          This wallet is the demo merchant. Paying yourself proves nothing and only loses the fee, so use another wallet to try a payment.
+        </StatusLine>
+      )}
       {scenarios.map((s) => (
         <div key={s.kind}>
           <h3>{s.title}</h3>

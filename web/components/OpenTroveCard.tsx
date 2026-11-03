@@ -85,7 +85,7 @@ export function OpenTroveCard({
     <Card title="Your Bitcoin credit">
       <p>
         Your MUSD balance is {formatMusd(shortfallWei)} MUSD short and you have no Trove yet. Open one here: lock BTC,
-        borrow MUSD, and pay, all in one transaction. You sign three messages first, then pay the network fee in BTC.
+        borrow MUSD, and pay, all in one transaction. You sign two or three messages first (the MUSD permit is skipped when your allowance already covers the payment), then pay the network fee in BTC.
       </p>
       <Field
         label="BTC to lock"
