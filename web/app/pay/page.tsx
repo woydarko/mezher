@@ -8,7 +8,6 @@ import {
   useAccount,
   usePublicClient,
   useReadContract,
-  useReadContracts,
   useSignTypedData,
   useSwitchChain,
   useWriteContract,
@@ -33,7 +32,6 @@ import {
   ADDRESSES,
   MEZHER_PAY_DEPLOY_BLOCK,
   MEZO_TESTNET,
-  borrowerOperationsAbi,
   borrowerOpsSignaturesAbi,
   explorerAddress,
   explorerTx,
@@ -41,10 +39,10 @@ import {
   mezherPayAbi,
   mezherPayCallAbi,
   musdAbi,
-  priceFeedAbi,
   troveManagerAbi,
 } from "@/lib/mezo";
 import { errorCode } from "@/lib/errors";
+import { readQuoteInputs } from "@/lib/quote-read";
 import { fetchPaidLogs, settledKey } from "@/lib/paid-logs";
 import { UI_ICR_FLOOR_E18, icrE18, quote, type TroveState } from "@/lib/quote";
 import { openTroveTypedData, orderTypedData, permitTypedData, splitSig, withdrawTypedData } from "@/lib/signatures";
@@ -63,7 +61,7 @@ const NO_BORROW: BorrowSig = { upperHint: zeroAddress, lowerHint: zeroAddress, d
 // Error codes (see lib/errors.ts) for a quote that stopped being payable between render and signing.
 const STALE_CODE = {
   needs_trove: "quote_changed",
-  blocked_ratio: "ICR < MCR",
+  blocked_ratio: "below_min_ratio",
   blocked_recovery: "Recovery Mode",
   blocked_capacity: "exceeds maxBorrowingCapacity",
 } as const;
@@ -175,73 +173,16 @@ function CheckoutFor({ link }: { link: PayLink }) {
   }, [address]);
 
   const payer = address ?? zeroAddress;
-  const reads = useReadContracts({
-    allowFailure: false,
-    query: { enabled: Boolean(address), refetchInterval: 15_000 },
-    contracts: [
-      { chainId: MEZO_TESTNET.id, address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [payer] },
-      { chainId: MEZO_TESTNET.id, address: ADDRESSES.troveManager, abi: troveManagerAbi, functionName: "getTroveStatus", args: [payer] },
-      {
-        chainId: MEZO_TESTNET.id,
-        address: ADDRESSES.troveManager,
-        abi: troveManagerAbi,
-        functionName: "getEntireDebtAndColl",
-        args: [payer],
-      },
-      { chainId: MEZO_TESTNET.id, address: ADDRESSES.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" },
-      {
-        chainId: MEZO_TESTNET.id,
-        address: ADDRESSES.troveManager,
-        abi: troveManagerAbi,
-        functionName: "getTroveMaxBorrowingCapacity",
-        args: [payer],
-      },
-    ],
+  const reads = useQuery({
+    queryKey: ["quote-inputs", address, link.amountWei.toString()],
+    enabled: Boolean(address && publicClient),
+    refetchInterval: 15_000,
+    queryFn: () => readQuoteInputs(publicClient!, address!, link.amountWei),
   });
-
-  const balanceWei = reads.data?.[0];
+  const { balanceWei, trove, priceE18 } = reads.data ?? {};
   const borrowWei =
     balanceWei === undefined ? 0n : link.amountWei - (balanceWei < link.amountWei ? balanceWei : link.amountWei);
-  const fee = useReadContract({
-    chainId: MEZO_TESTNET.id,
-    address: ADDRESSES.borrowerOperations,
-    abi: borrowerOperationsAbi,
-    functionName: "getBorrowingFee",
-    args: [borrowWei],
-    query: { enabled: borrowWei > 0n },
-  });
-
-  let trove: TroveState | undefined;
-  if (reads.data) {
-    const [coll, principal, interest, , pendingPrincipal, pendingInterest] = reads.data[2];
-    trove = {
-      status: Number(reads.data[1]),
-      collWei: coll,
-      debtWei: principal + interest + pendingPrincipal + pendingInterest,
-    };
-  }
-  const priceE18 = reads.data?.[3];
-  const capacityWei = reads.data?.[4];
-  // Needs the price, so it can't ride in the multicall above.
-  const recovery = useReadContract({
-    chainId: MEZO_TESTNET.id,
-    address: ADDRESSES.troveManager,
-    abi: troveManagerAbi,
-    functionName: "checkRecoveryMode",
-    args: [priceE18 ?? 0n],
-    query: { enabled: priceE18 !== undefined, refetchInterval: 15_000 },
-  });
-  const recoveryMode = recovery.data;
-  const feeWei = borrowWei > 0n ? fee.data : 0n;
-  const q =
-    balanceWei !== undefined &&
-    trove &&
-    priceE18 !== undefined &&
-    feeWei !== undefined &&
-    capacityWei !== undefined &&
-    recoveryMode !== undefined
-      ? quote({ amountWei: link.amountWei, balanceWei, trove, priceE18, feeWei, recoveryMode, capacityWei, minIcrE18: minIcr })
-      : undefined;
+  const q = reads.data ? quote({ ...reads.data, amountWei: link.amountWei, minIcrE18: minIcr }) : undefined;
   // Snapshot of the split shown on the receipt; the live quote moves once the balance updates.
   const [paidSplit, setPaidSplit] = useState<{ fromBalanceWei: bigint; borrowWei: bigint } | null>(null);
 
@@ -331,44 +272,18 @@ function CheckoutFor({ link }: { link: PayLink }) {
     deadline,
   });
 
-  /** Re-reads everything the quote depends on, so a stale screen can't ask for signatures that will revert. */
-  async function freshQuote(owner: Address) {
-    const read = publicClient!.readContract;
-    const priceE18 = await read({ address: ADDRESSES.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" });
-    const tm = { address: ADDRESSES.troveManager, abi: troveManagerAbi } as const;
-    const [balanceWei, status, debtAndColl, capacityWei, recoveryMode] = await Promise.all([
-      read({ address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [owner] }),
-      read({ ...tm, functionName: "getTroveStatus", args: [owner] }),
-      read({ ...tm, functionName: "getEntireDebtAndColl", args: [owner] }),
-      read({ ...tm, functionName: "getTroveMaxBorrowingCapacity", args: [owner] }),
-      read({ ...tm, functionName: "checkRecoveryMode", args: [priceE18] }),
-    ]);
-    const [coll, principal, interest, , pendingPrincipal, pendingInterest] = debtAndColl;
-    const freshTrove: TroveState = {
-      status: Number(status),
-      collWei: coll,
-      debtWei: principal + interest + pendingPrincipal + pendingInterest,
-    };
-    const borrow = link.amountWei - (balanceWei < link.amountWei ? balanceWei : link.amountWei);
-    const feeWei =
-      borrow > 0n
-        ? await read({ address: ADDRESSES.borrowerOperations, abi: borrowerOperationsAbi, functionName: "getBorrowingFee", args: [borrow] })
-        : 0n;
-    const fresh = quote({ amountWei: link.amountWei, balanceWei, trove: freshTrove, priceE18, feeWei, recoveryMode, capacityWei, minIcrE18: minIcr });
-    return { fresh, freshTrove };
-  }
-
   async function pay() {
     if (!address || !publicClient || !mezherPay || q?.state !== "ok") return;
     setFallback(null);
     dispatch({ type: "START" });
     try {
-      const { fresh: q, freshTrove: trove } = await freshQuote(address);
+      const live = await readQuoteInputs(publicClient, address, link.amountWei);
+      const { trove } = live;
+      const q = quote({ ...live, amountWei: link.amountWei, minIcrE18: minIcr });
       if (q.state !== "ok") {
         // The screen was stale: show the new state instead of asking for signatures.
         dispatch({ type: "FAILED", code: STALE_CODE[q.state] });
         refetch();
-        recovery.refetch();
         return;
       }
       setPaidSplit({ fromBalanceWei: q.fromBalanceWei, borrowWei: q.borrowWei });
@@ -582,6 +497,24 @@ function CheckoutFor({ link }: { link: PayLink }) {
     gate = <StatusLine tone="info">Checking the shop and your wallet…</StatusLine>;
 
   const staleLine = state.step === "failed" && state.error ? <StatusLine tone="error">{state.error}</StatusLine> : null;
+  // Shown whenever a borrow is needed, including when it is blocked, so the payer can lower a too-strict choice.
+  const minIcrField =
+    borrowWei > 0n ? (
+      <div className={ui.field}>
+        <label htmlFor="min-icr" className={ui.fieldLabel}>
+          Keep my ratio above
+        </label>
+        <span className={ui.inputWrap}>
+          <select id="min-icr" className={ui.input} value={minIcr.toString()} onChange={(e) => setMinIcr(BigInt(e.target.value))}>
+            {MIN_ICR_CHOICES.map((c) => (
+              <option key={c.label} value={c.value.toString()}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </span>
+      </div>
+    ) : null;
   const onMezo = isConnected && chainId === MEZO_TESTNET.id;
 
   return (
@@ -608,20 +541,18 @@ function CheckoutFor({ link }: { link: PayLink }) {
 
       {onMezo && mezherPay && !gate && (
         <>
-          {(reads.isLoading || recovery.isLoading || (borrowWei > 0n && fee.isLoading)) && (
+          {reads.isLoading && (
             <Card>
               <StatusLine tone="info">Reading your balance and Trove…</StatusLine>
             </Card>
           )}
 
-          {(reads.isError || recovery.isError || fee.isError) && (
+          {reads.isError && (
             <Card>
               <StatusLine tone="error">Can&apos;t reach Mezo testnet.</StatusLine>
               <SecondaryButton
                 onClick={() => {
                   reads.refetch();
-                  recovery.refetch();
-                  fee.refetch();
                 }}
               >
                 Retry
@@ -678,27 +609,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
                     customers can&apos;t pay you until you activate payments again on the Merchant page.
                   </StatusLine>
                 )}
-              {q.borrowWei > 0n && (
-                <div className={ui.field}>
-                  <label htmlFor="min-icr" className={ui.fieldLabel}>
-                    Keep my ratio above
-                  </label>
-                  <span className={ui.inputWrap}>
-                    <select
-                      id="min-icr"
-                      className={ui.input}
-                      value={minIcr.toString()}
-                      onChange={(e) => setMinIcr(BigInt(e.target.value))}
-                    >
-                      {MIN_ICR_CHOICES.map((c) => (
-                        <option key={c.label} value={c.value.toString()}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
-                  </span>
-                </div>
-              )}
+              {minIcrField}
               <PrimaryButton loading={busy} loadingLabel={loadingLabel} onClick={pay}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
@@ -710,9 +621,10 @@ function CheckoutFor({ link }: { link: PayLink }) {
           {q?.state === "blocked_ratio" && (
             <Card>
               <ReceiptLine label="You can borrow at most" value={formatMusd(q.maxBorrowWei) + " MUSD"} />
+              {minIcrField}
               <PrimaryButton
                 disabled
-                disabledReason="Your Trove would drop below 150%. Pay less or add collateral on Mezo."
+                disabledReason={"Your Trove would drop below " + formatRatio(minIcr) + ". Pay less, lower the ratio, or add collateral on Mezo."}
                 onClick={() => undefined}
               >
                 Pay {formatMusd(link.amountWei)} MUSD

@@ -144,3 +144,9 @@ describe("errorCode with Mezo revert strings", () => {
     expect(errorCopy(code)).toBe(copy);
   });
 });
+
+describe("below_min_ratio", () => {
+  it("blames the payer's own minimum, not Mezo", () => {
+    expect(errorCopy("below_min_ratio")).toBe("Your Trove would drop below the minimum ratio you chose. Lower it, or pay less.");
+  });
+});

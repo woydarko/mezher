@@ -15,6 +15,7 @@ const COPY: [match: string, copy: string][] = [
   ["ICR < MCR", "Your Trove would drop below Mezo's safe ratio. Pay less or add collateral on Mezo."],
   ["ICR >= CCR", "Your Trove would drop below Mezo's safe ratio. Pay less or add collateral on Mezo."],
   ["TCR < CCR", "Mezo's total ratio is too low for this borrow. Try again later."],
+  ["below_min_ratio", "Your Trove would drop below the minimum ratio you chose. Lower it, or pay less."],
   ["quote_changed", "Your Trove changed. Check the new numbers and press Pay again."],
   ["OrderAlreadySettled", "This order is already paid. Nothing was taken from you."],
   ["OrderExpired", "This payment request expired. Press Pay again."],

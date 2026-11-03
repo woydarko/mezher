@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UI_ICR_FLOOR_E18, icrE18, maxBorrowWei, quote, type TroveState } from "@/lib/quote";
+import { UI_ICR_FLOOR_E18, icrE18, maxBorrowWei, quote, toTroveState, type TroveState } from "@/lib/quote";
 
 const E18 = 10n ** 18n;
 const FEE_RATE_E18 = 10n ** 15n; // 0.1%
@@ -112,6 +112,7 @@ describe("quote with Recovery Mode and capacity", () => {
     }
     // With ample capacity the ICR room wins.
     const icr = q({ amountWei: 5000n * E18, feeWei: fee(5000n * E18) });
+    expect(icr.state).toBe("blocked_ratio");
     if (icr.state === "blocked_ratio") expect(icr.maxBorrowWei).toBe(maxBorrowWei(trove, 3000n * E18, UI_ICR_FLOOR_E18, FEE_RATE_E18));
   });
 
@@ -154,5 +155,11 @@ describe("maxBorrowWei", () => {
   it("is 0 when the Trove is already at or under the floor", () => {
     const low: TroveState = { status: 1, collWei: E18, debtWei: 1000n * E18 };
     expect(maxBorrowWei(low, 1500n * E18, UI_ICR_FLOOR_E18, FEE_RATE_E18)).toBe(0n);
+  });
+});
+
+describe("toTroveState", () => {
+  it("sums principal, interest and both pending parts into debt", () => {
+    expect(toTroveState(1n, [5n, 100n, 7n, 99n, 3n, 2n])).toEqual({ status: 1, collWei: 5n, debtWei: 112n });
   });
 });

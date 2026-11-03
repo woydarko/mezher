@@ -84,3 +84,12 @@ export function quote(i: QuoteInput): Quote {
   if (debtAfterWei > i.capacityWei) return { state: "blocked_capacity", maxBorrowWei: maxFor(), canRefinance: !i.recoveryMode };
   return { state: "ok", fromBalanceWei, borrowWei, feeWei: i.feeWei, icrNowE18, icrAfterE18 };
 }
+
+/** Builds a TroveState from getTroveStatus and getEntireDebtAndColl; the one place the debt formula lives. */
+export function toTroveState(
+  status: bigint | number,
+  debtAndColl: readonly [bigint, bigint, bigint, bigint, bigint, bigint],
+): TroveState {
+  const [coll, principal, interest, , pendingPrincipal, pendingInterest] = debtAndColl;
+  return { status: Number(status), collWei: coll, debtWei: principal + interest + pendingPrincipal + pendingInterest };
+}
