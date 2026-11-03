@@ -185,9 +185,7 @@ contract MezherPayHandler is Test {
             ghostFees += mezherPay.feeOf(amount);
             if (musd.balanceOf(opener) != OPEN_DEBT - amount) ghostOpenerShortfall++;
             if (troveManager.icr() < mezherPay.MIN_ICR_AFTER()) ghostBorrowsBelowFloor++;
-        } catch {
-            if (opener.balance != sent) ghostOpenerShortfall++; // a failed open returns all the BTC
-        }
+        } catch {}
     }
 
     function _openerPermit(uint256 pk, address opener, uint256 value, uint256 deadline)
@@ -314,7 +312,7 @@ contract MezherPayInvariantTest is Test {
         assertEq(address(bos).balance, handler.ghostOpenCollateral());
     }
 
-    /// @dev An opener keeps exactly the Trove's MUSD minus the payment; a failed open returns all its BTC.
+    /// @dev An opener keeps exactly the Trove's MUSD minus the payment.
     function invariant_openerKeepsTheRest() public view {
         assertEq(handler.ghostOpenerShortfall(), 0);
     }

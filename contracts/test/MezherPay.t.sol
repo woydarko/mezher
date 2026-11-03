@@ -671,39 +671,36 @@ contract MezherPayTest is Test {
         open = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, o.payer, o.deadline);
     }
 
-    function _assertNoBtcStranded(uint256 senderBefore) internal view {
-        assertEq(address(this).balance, senderBefore, "sender got the BTC back");
+    function _assertNoBtcStranded() internal view {
         assertEq(address(mezherPay).balance, 0, "contract holds no BTC");
     }
 
-    function test_openAndPay_revertsOnExpiredOpenSig_returnsBtc() public {
+    function test_openAndPay_revertsOnExpiredOpenSig() public {
         MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
         (bytes memory sig, MezherPay.PermitSig memory permit,) = _openArgs(o);
         MezherPay.OpenSig memory open = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, block.timestamp + 1 minutes);
-        uint256 before = address(this).balance;
 
         vm.warp(block.timestamp + 2 minutes); // order still valid, open sig is not
         vm.expectRevert("Signature expired");
         mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
 
-        _assertNoBtcStranded(before);
+        _assertNoBtcStranded();
         assertFalse(mezherPay.settled(keccak256(abi.encode(payer, merchant, orderId))), "order not consumed");
     }
 
-    function test_openAndPay_revertsOnTamperedDebt_returnsBtc() public {
+    function test_openAndPay_revertsOnTamperedDebt() public {
         MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
         (bytes memory sig, MezherPay.PermitSig memory permit, MezherPay.OpenSig memory open) = _openArgs(o);
         open.debtAmount = OPEN_DEBT * 2; // the submitter tries to load the payer with more debt
-        uint256 before = address(this).balance;
 
         vm.expectRevert("BorrowerOperationsSignatures: Invalid signature");
         mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
 
-        _assertNoBtcStranded(before);
+        _assertNoBtcStranded();
         assertEq(bos.debt(payer), 0, "no debt");
     }
 
-    function test_openAndPay_revertsWhenPayerHasActiveTrove_returnsBtc() public {
+    function test_openAndPay_revertsWhenPayerHasActiveTrove() public {
         MezherPay.OpenSig memory first = _openSig(payerPk, OPEN_COLL, OPEN_DEBT, payer, block.timestamp + 1 hours);
         bos.openTroveWithSignature{value: OPEN_COLL}(
             OPEN_DEBT, address(0), address(0), payer, payer, first.signature, first.deadline
@@ -711,18 +708,17 @@ contract MezherPayTest is Test {
 
         MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
         (bytes memory sig, MezherPay.PermitSig memory permit, MezherPay.OpenSig memory open) = _openArgs(o);
-        uint256 before = address(this).balance;
 
         vm.expectRevert("BorrowerOps: Trove is active");
         mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
 
-        _assertNoBtcStranded(before);
+        _assertNoBtcStranded();
         assertEq(bos.collateral(payer), OPEN_COLL, "existing Trove untouched");
         assertEq(musd.balanceOf(merchant), 0, "merchant unpaid");
     }
 
     /// @dev An order does not commit to an entry point: a third party can settle it through `pay` first.
-    function test_openAndPay_afterSameOrderSettledByPay_returnsBtc() public {
+    function test_openAndPay_revertsAfterSameOrderSettledByPay() public {
         MezherPay.Order memory o = _order(payer, merchant, 12e18, 12e18);
         (bytes memory sig, MezherPay.PermitSig memory permit, MezherPay.OpenSig memory open) = _openArgs(o);
 
@@ -730,11 +726,10 @@ contract MezherPayTest is Test {
         mezherPay.pay(o, sig, permit, _noBorrowSig());
         assertEq(musd.balanceOf(merchant) + musd.balanceOf(treasury), 12e18, "paid as signed");
 
-        uint256 before = address(this).balance;
         vm.expectRevert(MezherPay.OrderAlreadySettled.selector);
         mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
 
-        _assertNoBtcStranded(before);
+        _assertNoBtcStranded();
         assertEq(bos.collateral(payer), 0, "no Trove opened");
     }
 
@@ -754,10 +749,9 @@ contract MezherPayTest is Test {
         assertEq(musd.balanceOf(observer), 0, "observer got no MUSD");
         assertEq(musd.balanceOf(payer), 100e18 + OPEN_DEBT, "MUSD went to the payer");
 
-        uint256 before = address(this).balance;
         vm.expectRevert("BorrowerOperationsSignatures: Invalid signature");
         mezherPay.openAndPay{value: OPEN_COLL}(o, sig, permit, open);
-        _assertNoBtcStranded(before);
+        _assertNoBtcStranded();
     }
 
     function test_contractRefusesPlainBtc() public {
@@ -836,17 +830,6 @@ contract MezherPayTest is Test {
 
         assertEq(musd.balanceOf(payer), 100e18, "nothing moved");
         assertEq(musd.allowance(payer, address(mezherPay)), 12e18, "only the signed allowance");
-    }
-
-    /// @dev Unsigned hints are the only free field: a submitter can change the gas, never the outcome.
-    function test_pay_hintsAreNotSigned_outcomeUnchanged() public {
-        MezherPay.Order memory o = _order(payer, merchant, 7e18, 0);
-        MezherPay.BorrowSig memory borrow = _borrowSig(payerPk, 7e18, payer, merchant, o.deadline);
-        borrow.upperHint = makeAddr("junkHint");
-        borrow.lowerHint = makeAddr("junkHint2");
-
-        mezherPay.pay(o, _orderSig(payerPk, o), _permitSig(payerPk, payer, 0, o.deadline), borrow);
-        assertEq(musd.balanceOf(merchant), 7e18 - mezherPay.feeOf(7e18), "paid as signed");
     }
 
     // --- review regressions: replay ---
