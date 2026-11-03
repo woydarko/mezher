@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
@@ -618,7 +619,7 @@ function CheckoutFor({ link }: { link: PayLink }) {
               <PrimaryButton loading={busy} loadingLabel={loadingLabel} onClick={pay}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
-              {state.step === "failed" && state.error && <StatusLine tone="error">{state.error}</StatusLine>}
+              {staleLine}
               {fallback && <SecondaryButton onClick={payWithOwnGas}>Pay with my own gas</SecondaryButton>}
             </Card>
           )}
@@ -643,7 +644,11 @@ function CheckoutFor({ link }: { link: PayLink }) {
             <Card>
               <p>Your Trove&apos;s borrow limit was set when it was opened, and this payment is above it.</p>
               <ReceiptLine label="You can borrow at most" value={formatMusd(q.maxBorrowWei) + " MUSD"} />
-              {q.canRefinance && <p>Refinance your Trove to raise it.</p>}
+              {q.canRefinance && (
+                <p>
+                  Refinance your Trove to raise it, on your <Link href="/dashboard">dashboard</Link>.
+                </p>
+              )}
               <PrimaryButton disabled disabledReason="This is above your Trove's borrow limit." onClick={() => undefined}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
@@ -654,8 +659,8 @@ function CheckoutFor({ link }: { link: PayLink }) {
           {q?.state === "blocked_recovery" && (
             <Card>
               <p>Mezo is in Recovery Mode, so borrowing is paused.</p>
-              <ReceiptLine label="You can still pay from balance" value={formatMusd(q.fromBalanceWei) + " MUSD"} />
-              <PrimaryButton disabled disabledReason="Borrowing is paused. Try again later." onClick={() => undefined}>
+              <ReceiptLine label="Your MUSD balance" value={formatMusd(q.fromBalanceWei) + " MUSD"} sub="not enough for this payment" />
+              <PrimaryButton disabled disabledReason="Borrowing is paused. Try again later, or pay with a wallet that holds enough MUSD." onClick={() => undefined}>
                 Pay {formatMusd(link.amountWei)} MUSD
               </PrimaryButton>
               {staleLine}

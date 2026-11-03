@@ -56,6 +56,11 @@ export function maxBorrowWei(trove: TroveState, priceE18: bigint, floorE18: bigi
 
 const min = (a: bigint, b: bigint) => (a < b ? a : b);
 
+/** Largest borrow that keeps both the ratio floor and the Trove's fixed borrowing capacity. */
+export function maxBorrowWithCapacityWei(trove: TroveState, priceE18: bigint, floorE18: bigint, feeRateE18: bigint, capacityWei: bigint): bigint {
+  return min(maxBorrowWei(trove, priceE18, floorE18, feeRateE18), borrowFitting(capacityWei - trove.debtWei, feeRateE18));
+}
+
 export function quote(i: QuoteInput): Quote {
   const fromBalanceWei = i.balanceWei < i.amountWei ? i.balanceWei : i.amountWei;
   const borrowWei = i.amountWei - fromBalanceWei;
@@ -74,11 +79,7 @@ export function quote(i: QuoteInput): Quote {
   const debtAfterWei = i.trove.debtWei + borrowWei + i.feeWei;
   const icrAfterE18 = icrE18(i.trove.collWei, i.priceE18, debtAfterWei);
   // Smaller of ICR room and capacity room.
-  const maxFor = () =>
-    min(
-      maxBorrowWei(i.trove, i.priceE18, floorE18, FEE_RATE_E18),
-      borrowFitting(i.capacityWei - i.trove.debtWei, FEE_RATE_E18),
-    );
+  const maxFor = () => maxBorrowWithCapacityWei(i.trove, i.priceE18, floorE18, FEE_RATE_E18, i.capacityWei);
   if (icrAfterE18 < floorE18) return { state: "blocked_ratio", icrAfterE18, maxBorrowWei: maxFor() };
   // Mezo: maxBorrowingCapacity >= netDebtChange + debt (_requireHasBorrowingCapacity).
   if (debtAfterWei > i.capacityWei) return { state: "blocked_capacity", maxBorrowWei: maxFor(), canRefinance: !i.recoveryMode };

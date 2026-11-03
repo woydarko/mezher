@@ -18,7 +18,7 @@ import { WalletButton } from "@/components/WalletButton";
 import { formatMusd } from "@/lib/format";
 import { ADDRESSES, MEZHER_PAY_DEPLOY_BLOCK, MEZO_TESTNET, musdAbi, priceFeedAbi, troveManagerAbi } from "@/lib/mezo";
 import { fetchBlockTimes, fetchPaidLogs, type PaidLog } from "@/lib/paid-logs";
-import { icrE18, maxBorrowWei, UI_ICR_FLOOR_E18 } from "@/lib/quote";
+import { icrE18, maxBorrowWithCapacityWei, UI_ICR_FLOOR_E18 } from "@/lib/quote";
 import { dailyTotals, liquidationPriceE18, summarize } from "@/lib/stats";
 import d from "./dashboard.module.css";
 
@@ -107,6 +107,7 @@ function PayerTab({ address }: { address: Address }) {
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.troveManager, abi: troveManagerAbi, functionName: "getEntireDebtAndColl", args: [address] },
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.priceFeed, abi: priceFeedAbi, functionName: "fetchPrice" },
       { chainId: MEZO_TESTNET.id, address: ADDRESSES.musd, abi: musdAbi, functionName: "balanceOf", args: [address] },
+      { chainId: MEZO_TESTNET.id, address: ADDRESSES.troveManager, abi: troveManagerAbi, functionName: "getTroveMaxBorrowingCapacity", args: [address] },
     ],
   });
 
@@ -127,7 +128,11 @@ function PayerTab({ address }: { address: Address }) {
         {(status === 3 || status === 4) && <ClosedTrove address={address} status={status} onDone={() => reads.refetch()} />}
         {reads.data && !trove && status !== 3 && status !== 4 && (
           <>
-            <p>You don&apos;t have a Trove yet. Open one from any checkout, or on Mezo.</p>
+            <p>
+              {status === 2
+                ? "You closed your Trove. Open a new one from any checkout, or on Mezo."
+                : "You don't have a Trove yet. Open one from any checkout, or on Mezo."}
+            </p>
             <SecondaryButton href="https://testnet.mezo.org">Open a Trove on Mezo</SecondaryButton>
           </>
         )}
@@ -143,9 +148,9 @@ function PayerTab({ address }: { address: Address }) {
               />
               <StatTile
                 label="Can still borrow"
-                value={formatMusd(maxBorrowWei({ status: 1, ...trove }, price, UI_ICR_FLOOR_E18, FEE_RATE_E18))}
+                value={formatMusd(maxBorrowWithCapacityWei({ status: 1, ...trove }, price, UI_ICR_FLOOR_E18, FEE_RATE_E18, reads.data![4]))}
                 unit="MUSD"
-                sub="before the 150% safe line"
+                sub="before the 150% safe line or your borrow limit"
               />
             </StatGrid>
             <RatioMeter nowE18={icrE18(trove.collWei, price, trove.debtWei)} afterE18={icrE18(trove.collWei, price, trove.debtWei)} />

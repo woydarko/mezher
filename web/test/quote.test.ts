@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UI_ICR_FLOOR_E18, icrE18, maxBorrowWei, quote, toTroveState, type TroveState } from "@/lib/quote";
+import { UI_ICR_FLOOR_E18, icrE18, maxBorrowWei, maxBorrowWithCapacityWei, quote, toTroveState, type TroveState } from "@/lib/quote";
 
 const E18 = 10n ** 18n;
 const FEE_RATE_E18 = 10n ** 15n; // 0.1%
@@ -161,5 +161,18 @@ describe("maxBorrowWei", () => {
 describe("toTroveState", () => {
   it("sums principal, interest and both pending parts into debt", () => {
     expect(toTroveState(1n, [5n, 100n, 7n, 99n, 3n, 2n])).toEqual({ status: 1, collWei: 5n, debtWei: 112n });
+  });
+});
+
+describe("maxBorrowWithCapacityWei", () => {
+  it("is the ratio room when capacity is large, and the capacity room when it is smaller", () => {
+    const ratio = maxBorrowWei(activeTrove, PRICE, UI_ICR_FLOOR_E18, FEE_RATE_E18);
+    expect(maxBorrowWithCapacityWei(activeTrove, PRICE, UI_ICR_FLOOR_E18, FEE_RATE_E18, 10n ** 30n)).toBe(ratio);
+    const capped = maxBorrowWithCapacityWei(activeTrove, PRICE, UI_ICR_FLOOR_E18, FEE_RATE_E18, activeTrove.debtWei + 100n * E18);
+    expect(capped).toBeLessThan(100n * E18);
+    expect(capped + fee(capped)).toBeLessThanOrEqual(100n * E18);
+  });
+  it("is 0 when the debt is already over capacity", () => {
+    expect(maxBorrowWithCapacityWei(activeTrove, PRICE, UI_ICR_FLOOR_E18, FEE_RATE_E18, 1n)).toBe(0n);
   });
 });

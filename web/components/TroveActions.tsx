@@ -37,7 +37,8 @@ function useTroveTx(onDone: () => Promise<unknown> | void, refreshKey: string) {
         .catch(() => publicClient!.getTransactionReceipt({ hash }));
       if (receipt.status !== "success") return setTx({ phase: "error", hash, error: errorCopy("reverted") });
       // Stay busy until fresh data is in, so a second click cannot repeat the call on stale numbers.
-      await Promise.all([queryClient.invalidateQueries({ queryKey: [refreshKey] }), onDone()]);
+      // The tx already succeeded, so a failed refresh is not an error: the 15 s poll catches up.
+      await Promise.all([queryClient.invalidateQueries({ queryKey: [refreshKey] }), onDone()]).catch(() => undefined);
       setTx({ phase: "done", hash });
     } catch (err) {
       setTx({ phase: "error", error: errorCopy(errorCode(err)) });
