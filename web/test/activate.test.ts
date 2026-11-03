@@ -85,6 +85,14 @@ describe("activate handler", () => {
     expect((await handle(req(body(), "10.0.0.99"))).status).toBe(429);
   });
 
+  it("does not let requests with bad signatures lock a merchant out", async () => {
+    const simulate = vi.fn(async () => ({ ok: false, reason: "ERC2612InvalidSigner" }) as const) as unknown as ActivateDeps["simulate"];
+    const { handle } = setup({ simulate });
+    for (let i = 0; i < 6; i++) expect((await handle(req(body(), "10.2.0." + i))).status).toBe(422);
+    (simulate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    expect((await handle(req(body(), "10.2.0.99"))).status).toBe(200);
+  });
+
   it("returns 503 when the relayer is out of gas money", async () => {
     const { deps, handle } = setup({ relayerBalanceWei: vi.fn(async () => 0n) });
     expect((await handle(req(body()))).status).toBe(503);

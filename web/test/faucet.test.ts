@@ -74,6 +74,21 @@ describe("faucet", () => {
     expect((await h(req({ address: B }))).status).toBe(200);
   });
 
+  it("keeps the one claim per IP when requests arrive at the same time", async () => {
+    const d = deps();
+    const h = createFaucetHandler(d);
+    const res = await Promise.all([h(req({ address: A })), h(req({ address: B }))]);
+    expect(res.map((r) => r.status).sort()).toEqual([200, 429]);
+    expect(d.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("frees the IP again when a claim is not sent", async () => {
+    const send = vi.fn().mockRejectedValueOnce(new Error("rpc down")).mockResolvedValue(HASH);
+    const h = createFaucetHandler(deps({ send }));
+    expect((await h(req({ address: A }))).status).toBe(502);
+    expect((await h(req({ address: B }))).status).toBe(200);
+  });
+
   it("caps claims at 20 per hour across all IPs", async () => {
     let t = 1_800_000_000_000;
     const d = deps({ now: () => t });

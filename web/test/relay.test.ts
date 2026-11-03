@@ -1,6 +1,6 @@
 import type { Hex } from "viem";
 import { describe, expect, it, vi } from "vitest";
-import { createRelayHandler, MIN_SPONSORED_WEI, type RelayDeps } from "@/lib/relay";
+import { clientIp, createRelayHandler, MIN_SPONSORED_WEI, type RelayDeps } from "@/lib/relay";
 
 const PAYER = "0x11a632076c274C8A29F09AD241Ef6c46118e9be3";
 const MERCHANT = "0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2";
@@ -108,6 +108,48 @@ describe("relay handler", () => {
     const { handle } = setup();
     const res = await handle(req(JSON.stringify({ ...body(), pad: "x".repeat(4096) })));
     expect(res.status).toBe(413);
+  });
+
+  it("stops reading a body without content-length once it is over the limit", async () => {
+    const { handle } = setup();
+    let pulled = 0;
+    const stream = new ReadableStream<Uint8Array>({
+      pull(c) {
+        if (++pulled > 100) return c.close();
+        c.enqueue(new Uint8Array(1024));
+      },
+    });
+    const res = await handle(new Request("http://localhost/api/relay", { method: "POST", body: stream, duplex: "half" } as RequestInit));
+    expect(res.status).toBe(413);
+    expect(pulled).toBeLessThan(10);
+  });
+
+  it("does not let a client pick its rate-limit IP with an extra x-forwarded-for hop", () => {
+    const spoofed = new Request("http://localhost/", { headers: { "x-forwarded-for": "6.6.6.6, 8.8.8.8" } });
+    expect(clientIp(spoofed)).toBe("8.8.8.8");
+    expect(clientIp(new Request("http://localhost/"))).toBe("unknown");
+  });
+
+  it("does not let requests with bad signatures lock a payer out", async () => {
+    const simulate = vi.fn(async () => ({ ok: false, reason: "BadOrderSignature" }) as const) as unknown as RelayDeps["simulate"];
+    const { handle } = setup({ simulate });
+    for (let i = 0; i < 6; i++) expect((await handle(req(body(), "10.2.0." + i))).status).toBe(422);
+    (simulate as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: true });
+    expect((await handle(req(body(), "10.2.0.99"))).status).toBe(200);
+  });
+
+  it("sends once when the same order arrives twice at the same time", async () => {
+    const { deps, handle } = setup();
+    const [a, b] = await Promise.all([handle(req(body(), "10.3.0.1")), handle(req(body(), "10.3.0.2"))]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect(deps.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets the payer retry an order whose send failed", async () => {
+    const send = vi.fn().mockRejectedValueOnce(new Error("rpc down")).mockResolvedValue(HASH);
+    const { handle } = setup({ send });
+    expect((await handle(req(body()))).status).toBe(503);
+    expect((await handle(req(body()))).status).toBe(200);
   });
 
   it("relay returns simulation_failed when the price moved under the floor", async () => {

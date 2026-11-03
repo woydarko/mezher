@@ -66,14 +66,32 @@ export function log(route: string, status: number, payer?: Address, hash?: Hex, 
   console.info(JSON.stringify({ route, status, payer: payer?.slice(0, 6), hash, error }));
 }
 
+/** The body as text, or null past the size limit; stops reading there so an oversized body is never buffered. */
+async function readLimited(req: Request): Promise<string | null> {
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) return Buffer.concat(chunks).toString("utf8");
+    size += value.byteLength;
+    if (size > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+}
+
 /** Reads a JSON body under the size limit and validates it; on failure `response` is the answer to send. */
 export async function readBody<T extends z.ZodType>(
   req: Request,
   schema: T,
   route: string,
 ): Promise<{ ok: true; data: z.infer<T> } | { ok: false; response: Response }> {
-  const text = await req.text();
-  if (new TextEncoder().encode(text).length > MAX_BODY_BYTES) {
+  const text = await readLimited(req);
+  if (text === null) {
     log(route, 413);
     return { ok: false, response: json(413, { error: "body_too_large" }) };
   }
@@ -110,7 +128,8 @@ export function createRateLimiter(): (key: string, now: number) => boolean {
   };
 }
 
-export const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+// The last hop is the one our own proxy wrote; anything before it came from the client. Vercel sends one value.
+export const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim() ?? "unknown";
 
 /** viem's shortMessage has no request args (calldata carries the signatures); fall back to the class name. */
 export function shortError(err: unknown): string {
@@ -146,9 +165,7 @@ export function createRelayHandler(deps: RelayDeps): (req: Request) => Promise<R
       return json(422, { error: "own_gas_required" });
     }
 
-    const payerLimited = overLimit("payer:" + payer, now);
-    const ipLimited = overLimit("ip:" + clientIp(req), now);
-    if (payerLimited || ipLimited) {
+    if (overLimit("ip:" + clientIp(req), now)) {
       log(ROUTE, 429, payer);
       return json(429, { error: "rate_limited" });
     }
@@ -159,6 +176,9 @@ export function createRelayHandler(deps: RelayDeps): (req: Request) => Promise<R
       log(ROUTE, 409, payer);
       return json(409, { error: "already_relayed" });
     }
+    // Taken before any await, so a parallel copy of this order cannot also be sent.
+    relayed.set(dedupeKey, now);
+    let sent = false;
 
     try {
       if ((await deps.relayerBalanceWei()) < MIN_RELAYER_BALANCE_WEI) {
@@ -172,14 +192,22 @@ export function createRelayHandler(deps: RelayDeps): (req: Request) => Promise<R
         return json(422, { error: "simulation_failed", reason: sim.reason });
       }
 
+      // Counted only once the simulation accepted the payer's signatures, so a stranger cannot lock a payer out.
+      if (overLimit("payer:" + payer, now)) {
+        log(ROUTE, 429, payer);
+        return json(429, { error: "rate_limited" });
+      }
+
       const hash = await deps.send(body);
-      relayed.set(dedupeKey, now);
+      sent = true;
       log(ROUTE, 200, payer, hash);
       return json(200, { hash });
     } catch (err) {
       // RPC or key failure: the client falls back to "Pay with my own gas".
       log(ROUTE, 503, payer, undefined, shortError(err));
       return json(503, { error: "relayer_unavailable" });
+    } finally {
+      if (!sent) relayed.delete(dedupeKey);
     }
   };
 }

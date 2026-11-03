@@ -74,6 +74,9 @@ export function createFaucetHandler(deps: FaucetDeps): (req: Request) => Promise
     }
 
     inflight.add(to);
+    // Taken before any await, so parallel requests from one IP cannot each claim.
+    ipClaimedAt.set(ip, now);
+    let sent = false;
     try {
       const claim = await deps.claimWei();
       if ((await deps.balanceOf(to)) >= claim) {
@@ -85,6 +88,7 @@ export function createFaucetHandler(deps: FaucetDeps): (req: Request) => Promise
         return json(503, { error: "faucet_empty" });
       }
       const hash = await deps.send(to, claim);
+      sent = true;
       claimed.add(to);
       ipClaimedAt.set(ip, now);
       claimTimes.push(now);
@@ -95,6 +99,7 @@ export function createFaucetHandler(deps: FaucetDeps): (req: Request) => Promise
       return json(502, { error: "faucet_unavailable" });
     } finally {
       inflight.delete(to);
+      if (!sent) ipClaimedAt.delete(ip);
     }
   };
 }

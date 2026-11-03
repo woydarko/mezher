@@ -60,9 +60,7 @@ export function createActivateHandler(deps: ActivateDeps): (req: Request) => Pro
       return json(400, { error: "invalid_input", details: "deadline more than 1 hour ahead" });
     }
 
-    const ownerLimited = overLimit("owner:" + owner, now);
-    const ipLimited = overLimit("ip:" + clientIp(req), now);
-    if (ownerLimited || ipLimited) {
+    if (overLimit("ip:" + clientIp(req), now)) {
       log(ROUTE, 429, owner);
       return json(429, { error: "rate_limited" });
     }
@@ -76,6 +74,11 @@ export function createActivateHandler(deps: ActivateDeps): (req: Request) => Pro
       if (!sim.ok) {
         log(ROUTE, 422, owner);
         return json(422, { error: "simulation_failed", reason: sim.reason });
+      }
+      // Counted only once the simulation accepted the owner's permit, so a stranger cannot lock a merchant out.
+      if (overLimit("owner:" + owner, now)) {
+        log(ROUTE, 429, owner);
+        return json(429, { error: "rate_limited" });
       }
       const hash = await deps.send(body);
       log(ROUTE, 200, owner, hash);
