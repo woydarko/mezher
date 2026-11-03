@@ -15,6 +15,10 @@ interface IMusdMainnet is IERC20 {
 interface ITroveManagerMainnet is ITroveManager {
     function getTroveStatus(address _borrower) external view returns (uint256);
     function checkRecoveryMode(uint256 _price) external view returns (bool);
+    function getEntireDebtAndColl(address _borrower)
+        external
+        view
+        returns (uint256 coll, uint256, uint256, uint256, uint256, uint256);
 }
 
 interface IEip712Mainnet {
@@ -52,11 +56,13 @@ contract MezherPayMainnetForkTest is Test {
         ITroveManagerMainnet(0x94AfB503dBca74aC3E4929BACEeDfCe19B93c193);
     IPriceFeed internal constant PRICE_FEED = IPriceFeed(0xc5aC5A8892230E0A3e1c473881A2de7353fFcA88);
 
-    /// @dev USD per BTC, 18 decimals. The native oracle precompile does not exist in revm, so the price is pinned.
-    uint256 internal constant FORK_PRICE = 100_000e18;
     uint256 internal constant COLLATERAL = 0.1 ether;
     uint256 internal constant OPEN_DEBT = 2_000e18; // above Mezo's 1800 MUSD minimum net debt
     uint256 internal constant FEE_BPS = 50;
+
+    /// @dev Live USD per BTC (18 decimals), read from the node with `eth_call`: the native oracle precompile
+    ///      exists on the node but not in revm, so it is pinned for the rest of the test.
+    uint256 internal forkPrice;
 
     MezherPay internal mezherPay;
     bytes32 internal bosDomainSeparator;
@@ -68,11 +74,18 @@ contract MezherPayMainnetForkTest is Test {
 
     function setUp() public {
         string memory rpc = vm.envOr("MEZO_MAINNET_RPC_URL", string(""));
-        vm.skip(bytes(rpc).length == 0);
+        vm.skip(bytes(rpc).length == 0, "MEZO_MAINNET_RPC_URL is not set");
         vm.createSelectFork(rpc);
 
-        vm.mockCall(address(PRICE_FEED), abi.encodeWithSelector(IPriceFeed.fetchPrice.selector), abi.encode(FORK_PRICE));
-        vm.skip(TROVE_MANAGER.checkRecoveryMode(FORK_PRICE), "Mezo mainnet is in Recovery Mode");
+        bytes memory call = abi.encodeWithSelector(IPriceFeed.fetchPrice.selector);
+        bytes memory raw = vm.rpc(
+            "eth_call",
+            string.concat('[{"to":"', vm.toString(address(PRICE_FEED)), '","data":"', vm.toString(call), '"},"latest"]')
+        );
+        forkPrice = abi.decode(raw, (uint256));
+        assertGt(forkPrice, 0, "live price");
+        vm.mockCall(address(PRICE_FEED), call, abi.encode(forkPrice));
+        vm.skip(TROVE_MANAGER.checkRecoveryMode(forkPrice), "Mezo mainnet is in Recovery Mode");
 
         mezherPay = new MezherPay(
             IERC20(address(MUSD)), BOS, ITroveManager(address(TROVE_MANAGER)), PRICE_FEED, treasury, FEE_BPS
@@ -92,6 +105,7 @@ contract MezherPayMainnetForkTest is Test {
         );
 
         (payer, payerPk) = makeAddrAndKey("mainnetPayer");
+        vm.deal(payer, COLLATERAL);
     }
 
     function _digest(bytes32 domain, bytes32 structHash) internal pure returns (bytes32) {
@@ -181,6 +195,8 @@ contract MezherPayMainnetForkTest is Test {
 
         uint256 fee1 = mezherPay.feeOf(12e18);
         assertEq(TROVE_MANAGER.getTroveStatus(payer), 1, "trove active");
+        (uint256 coll,,,,,) = TROVE_MANAGER.getEntireDebtAndColl(payer);
+        assertEq(coll, COLLATERAL, "Trove collateral equals the BTC sent");
         assertEq(MUSD.balanceOf(merchant), 12e18 - fee1, "merchant paid by the opening payment");
         assertEq(MUSD.balanceOf(payer), OPEN_DEBT - 12e18, "rest of the Trove MUSD stays with payer");
 
@@ -194,6 +210,6 @@ contract MezherPayMainnetForkTest is Test {
         assertEq(MUSD.balanceOf(treasury), fee1 + fee2, "treasury got both fees");
         assertEq(MUSD.balanceOf(address(mezherPay)), 0, "contract holds no MUSD");
         assertEq(address(mezherPay).balance, 0, "contract holds no BTC");
-        assertGe(TROVE_MANAGER.getCurrentICR(payer, FORK_PRICE), 1.5e18, "ICR at or above the floor");
+        assertGe(TROVE_MANAGER.getCurrentICR(payer, forkPrice), 1.5e18, "ICR at or above the floor");
     }
 }

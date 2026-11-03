@@ -192,6 +192,9 @@ contract MezherPay is EIP712 {
     ///         MUSD the Trove minted to the payer. Everything above `o.amount` stays with the payer.
     /// @dev The contract never holds MUSD or BTC: the BTC goes straight into the Trove and the MUSD moves
     ///      payer to merchant through the permit. Mezo's signature binds `msg.value` as `assetAmount`.
+    ///      An order does not commit to an entry point: a third party can submit the same order through `pay`
+    ///      if the payer already holds the MUSD. The merchant is then paid as signed and this call reverts
+    ///      (`OrderAlreadySettled`), returning the BTC.
     /// @param o The order; `o.fromBalance` must equal `o.amount`.
     /// @param orderSig EIP-712 signature of `o` by `o.payer`.
     /// @param permit MUSD permit signed by `o.payer` for `o.amount`.
