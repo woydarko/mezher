@@ -14,6 +14,7 @@
   <a href="https://mezher.vercel.app/proof">Proof</a> ·
   <a href="https://explorer.test.mezo.org/address/0xF113519362677fc0BDE15B172FF22DD8dB30aF27?tab=contract">Contract v2 (verified, partial match)</a> ·
   <a href="https://explorer.test.mezo.org/tx/0xbd5855f0d7c0a322c584597f81296e0be3a56c434c50c378879ef6b17336dfd0">Open Trove and pay on testnet</a> ·
+  <a href="https://youtu.be/ig3fK2bzWmY">Wave 2 demo video</a> ·
   <a href="https://www.youtube.com/watch?v=Y6cAobzL7g8">Wave 1 demo video</a> ·
   <a href="https://drive.google.com/file/d/1n_nNus2p2HWk6ShxbhdL81uJr6z7KvDw/view?usp=sharing">Wave 1 deck</a> ·
   <a href="#getting-started">Run it</a> ·
