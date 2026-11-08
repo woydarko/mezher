@@ -122,7 +122,7 @@ export default function TryPage() {
       ) : (
         <Card title="What you will do">
           <ol>
-            <li>Get test BTC from our faucet (or the Mezo faucet).</li>
+            <li>Get test BTC from the Mezo faucet.</li>
             <li>
               Pay 20 MUSD to a demo merchant. With no Trove, checkout opens one for you. With a Trove and enough MUSD,
               it pays from your balance, or part balance and part borrowed. With a little MUSD, it uses that first and borrows the rest. With none, it

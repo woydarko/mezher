@@ -204,7 +204,7 @@ contracts/
   test/                    unit, invariant (mocks) and fork tests (real Mezo testnet and mainnet)
   script/Deploy.s.sol      deployment script
 web/
-  app/                     Next.js pages: / landing, /pay, /try, /proof, /merchant, /dashboard, /terms; API routes /api/relay, /api/activate, /api/faucet
+  app/                     Next.js pages: / landing, /pay, /try, /proof, /merchant, /dashboard, /terms; API routes /api/relay, /api/activate
   components/              crayon UI components
   lib/                     link, quote, Trove, redemption, signatures, hints, relay, proof, payment logs (unit tested)
   scripts/mezo-stats.mjs   read-only Mezo mainnet MUSD, Trove and redemption numbers
